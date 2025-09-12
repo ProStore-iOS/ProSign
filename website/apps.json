@@ -2,4 +2,4 @@
 permalink: /apps.json
 layout: null
 ---
-{% include_relative ../app-repo.json %}
+{% include_relative app-repo.json %}
