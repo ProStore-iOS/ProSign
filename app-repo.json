@@ -11,5 +11,31 @@
     "repoIcon": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
   },
   "apps": [
+    {
+      "name": "ProStore",
+      "bundleIdentifier": "com.prostoreios.prostore",
+      "developerName": "ProStore iOS",
+      "localizedDescription": "The BEST alternative app store for iOS!",
+      "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
+      "screenshotURLs": [
+        "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot1.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot2.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot3.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot4.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot5.png"
+      ],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "date": "2025-09-12T05:29:30+0000",
+          "localizedDescription": "What's new in Version 1.0.0?\n- A fresh start for ProStore iOS\n- Add icons into Assets.xcassets",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.0.0/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 1425888,
+          "sha256": "2c75f1d8feb9de5c2f170db8966918d034caf2dc39b624311fea92043ac307ef",
+          "minOSVersion": "15.0",
+          "fullDate": "20250912052930"
+        }
+      ]
+    }
   ]
 }
