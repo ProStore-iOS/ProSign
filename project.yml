@@ -1,11 +1,7 @@
-name: prostore
-
-options:
-  bundleIdPrefix: com.prostoreios
-
-configs:
-  Debug: debug
-  Release: release
+packages:
+  ProSourceManager:
+    url: https://github.com/ProStore-iOS/ProSourceManager.git
+    branch: main
 
 targets:
   prostore:
@@ -28,3 +24,6 @@ targets:
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+    dependencies:
+      - package: ProSourceManager
+        product: ProSourceManager

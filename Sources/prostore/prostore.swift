@@ -1,10 +1,10 @@
 import SwiftUI
 
 @main
-struct ProStoreApp: App {
+struct ProStore: App {
     var body: some Scene {
         WindowGroup {
-            EmptyView()
+            ContentView()
         }
     }
 }

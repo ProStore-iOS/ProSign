@@ -95,6 +95,12 @@ jobs:
           echo "project.pbxproj header (first 60 lines):"
           sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
 
+      - name: Resolve Swift Package dependencies
+        run: |
+          set -e
+          echo "Resolving Swift package dependencies for prostore..."
+          xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
+
       - name: Try building archive, auto-fix objectVersion on future-format error
         run: |
           set -e
