@@ -4,11 +4,12 @@ on:
   # Run manually
   workflow_dispatch:
 
-  # Run on push, but only if /website/ changed
+  # Run on push if website changed OR the root JSON changed
   push:
     branches: ["main"]
     paths:
       - 'website/**'
+      - 'app-repo.json'   # <- include the root file so changes to it trigger a build
 
 permissions:
   contents: read
@@ -25,6 +26,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # COPY the single root file into the website/ source so Jekyll will include it
+      - name: Copy root JSON into website (if present)
+        run: |
+          if [ -f ./app-repo.json ]; then
+            echo "Found app-repo.json — copying into website/"
+            mkdir -p website
+            cp ./app-repo.json website/app-repo.json
+          else
+            echo "No app-repo.json in repo root — skipping copy"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
