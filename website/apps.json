@@ -1,4 +1,5 @@
 ---
 permalink: /apps.json
+layout: null
 ---
-{{ site.data.apps | jsonify }}
+{% include_relative ../app-repo.json %}
