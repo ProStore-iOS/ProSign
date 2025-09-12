@@ -27,6 +27,16 @@
       "versions": [
         {
           "version": "1.6.1",
+          "date": "2025-09-12T05:14:23+0000",
+          "localizedDescription": "What's new in Version 1.6.1?\n- Add icons into Assets.xcassets",
+          "downloadURL": "https://github.com/SuperGamer474/ProStore/releases/download/v1.6.1/com.supergamer474.prostore-unsigned-ios.ipa",
+          "size": 1425892,
+          "sha256": "9baa0c594da771dc1678a04c58f3c209170c9210f3a62ffd3e233b0f49a8c3d8",
+          "minOSVersion": "15.0",
+          "fullDate": "20250912051423"
+        },
+        {
+          "version": "1.6.1",
           "date": "2025-09-11T07:10:23+0000",
           "localizedDescription": "What's new in Version 1.6.1?\n- Fix 'What's new' section to show correctly\n- Fix markdown rendering and newline issues",
           "downloadURL": "https://github.com/SuperGamer474/ProStore/releases/download/v1.6.1/com.supergamer474.prostore-unsigned-ios.ipa",
