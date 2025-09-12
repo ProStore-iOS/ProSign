@@ -494,3 +494,35 @@ jobs:
             git push origin HEAD:main
           fi
         shell: bash
+
+      - name: Push apps.json to Pages repo (ProStore-iOS.github.io) using PAT
+        if: steps.check_release.outputs.exists == 'false'
+        env:
+          PAGES_PAT: ${{ secrets.PAGES_PAT }}
+        run: |
+          set -e
+          VERSION="${{ steps.get_version.outputs.version }}"
+          PAGES_REPO="ProStore-iOS/ProStore-iOS.github.io"
+          PAGES_DIR=$(mktemp -d)
+
+          echo "Cloning pages repo (masked token)..."
+          git clone --depth 1 "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" "$PAGES_DIR"
+
+          echo "Copying app-repo.json -> apps.json in pages repo"
+          cp app-repo.json "$PAGES_DIR/apps.json"
+
+          cd "$PAGES_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only commit if there's a change
+          git add apps.json
+          if git diff --quiet --cached; then
+            echo "No changes to apps.json — nothing to commit/push."
+            exit 0
+          fi
+
+          git commit -m "Update apps.json from ProStore v${VERSION}"
+          echo "Pushing apps.json to ${PAGES_REPO}:main"
+          git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
+        shell: bash
