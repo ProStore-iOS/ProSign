@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.0.1",
+          "date": "2025-09-12T07:24:03+0000",
+          "localizedDescription": "What's new in Version 1.0.1?\n- Update Workflow File\n- Update ProStore app URLs in README\n- Create index.html for Github Pages\n- Modify Jekyll source directory in deployment workflow\n- Update GitHub Actions workflow for Jekyll site\n- Add script to fetch JSON data in index.html\n- Fix HTML encoding and update fetch URL\n- Add apps directory to website\n- Update and rename apps to apps.json\n- Update apps.json to include app-repo.json\n- Modify workflow to include app-repo.json and copy it\n- Fix include path in apps.json\n- Delete website directory\n- Delete .github/workflows/jekyll-gh-pages.yml",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.0.1/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 1425888,
+          "sha256": "ba82334b5ee96640145136b4906a03df90828816a05c951b8f2a45cb6ce4e827",
+          "minOSVersion": "15.0",
+          "fullDate": "20250912072403"
+        },
+        {
           "version": "1.0.0",
           "date": "2025-09-12T05:29:30+0000",
           "localizedDescription": "What's new in Version 1.0.0?\n- A fresh start for ProStore iOS\n- Add icons into Assets.xcassets",
