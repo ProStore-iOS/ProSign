@@ -8,6 +8,7 @@ on:
       - 'README.md'
       - 'app-repo.json'
       - 'gallery/**'
+      - 'website/**'
 
 permissions:
   contents: write
