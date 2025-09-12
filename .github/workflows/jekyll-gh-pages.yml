@@ -1,9 +1,14 @@
 name: Deploy Github Pages Site
 
 on:
+  # Run manually
+  workflow_dispatch:
+
+  # Run on push, but only if /website/ changed
   push:
     branches: ["main"]
-  workflow_dispatch:
+    paths:
+      - 'website/**'
 
 permissions:
   contents: read
@@ -27,7 +32,7 @@ jobs:
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: ./website      # <- changed from ./ to ./website
+          source: ./website
           destination: ./_site
 
       - name: Upload artifact
