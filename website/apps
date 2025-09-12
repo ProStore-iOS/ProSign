@@ -1,0 +1,4 @@
+---
+permalink: /apps.json
+---
+{{ site.data.apps | jsonify }}
