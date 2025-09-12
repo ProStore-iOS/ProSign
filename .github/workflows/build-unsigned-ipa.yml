@@ -141,7 +141,7 @@ jobs:
           set -e
           ARCHIVE_PATH="$PWD/build/prostore.xcarchive"
           APP_PATH="$ARCHIVE_PATH/Products/Applications/prostore.app"
-          OUTPUT_IPA="build/com.supergamer474.prostore-unsigned-ios.ipa"
+          OUTPUT_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
           echo "Device app path: $APP_PATH"
           if [ ! -d "$APP_PATH" ]; then
             echo "ERROR: App not found at expected path. Listing archive contents:"
@@ -198,7 +198,7 @@ jobs:
           fi
 
           echo "Found simulator .app at: $FOUND_APP"
-          SIM_IPA="build/com.supergamer474.prostore-unsigned-iossimulator.ipa"
+          SIM_IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
           mkdir -p build/Payload-sim
           rm -rf build/Payload-sim/* || true
           cp -R "$FOUND_APP" build/Payload-sim/
@@ -209,14 +209,14 @@ jobs:
       - name: Upload device unsigned IPA artifact (named as .ipa)
         uses: actions/upload-artifact@v4
         with:
-          name: com.supergamer474.prostore-unsigned-ios.ipa
-          path: build/com.supergamer474.prostore-unsigned-ios.ipa
+          name: com.prostoreios.prostore-unsigned-ios.ipa
+          path: build/com.prostoreios.prostore-unsigned-ios.ipa
 
       - name: Upload simulator unsigned IPA artifact (named as .ipa) (ignore if not found)
         uses: actions/upload-artifact@v4
         with:
-          name: com.supergamer474.prostore-unsigned-iossimulator.ipa
-          path: build/com.supergamer474.prostore-unsigned-iossimulator.ipa
+          name: com.prostoreios.prostore-unsigned-iossimulator.ipa
+          path: build/com.prostoreios.prostore-unsigned-iossimulator.ipa
           if-no-files-found: ignore
 
       - name: Extract version from project.yml
@@ -366,8 +366,8 @@ jobs:
           echo "Creating release $TAG with notes:"
           printf '%s\n' "$CHANGELOG"
           gh release create "$TAG" \
-            build/com.supergamer474.prostore-unsigned-ios.ipa \
-            build/com.supergamer474.prostore-unsigned-iossimulator.ipa \
+            build/com.prostoreios.prostore-unsigned-ios.ipa \
+            build/com.prostoreios.prostore-unsigned-iossimulator.ipa \
             --title "ProStore v$VERSION" \
             --notes "$CHANGELOG"
         shell: bash
@@ -379,8 +379,8 @@ jobs:
         run: |
           set -e
           VERSION="${{ steps.get_version.outputs.version }}"
-          IPA_PATH="$PWD/build/com.supergamer474.prostore-unsigned-ios.ipa"
-          DOWNLOAD_URL="https://github.com/SuperGamer474/ProStore/releases/download/v$VERSION/com.supergamer474.prostore-unsigned-ios.ipa"
+          IPA_PATH="$PWD/build/com.prostoreios.prostore-unsigned-ios.ipa"
+          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProStore/releases/download/v$VERSION/com.prostoreios.prostore-unsigned-ios.ipa"
           REPO_FILE="app-repo.json"
           CHANGELOG="${{ steps.generate_changelog.outputs.CHANGELOG }}"
 
@@ -396,27 +396,27 @@ jobs:
           MIN_OS="15.0"
           FULL_DATE=$(date +%Y%m%d%H%M%S)
 
-          ICON_URL="https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
-          BUNDLE="com.supergamer474.prostore"
+          ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
+          BUNDLE="com.prostoreios.prostore"
           META_DESC="The BEST alternative app store for iOS!"
-          DEVNAME="SuperGamer474"
+          DEVNAME="ProStore iOS"
           SCREENSHOTS='[
-            "https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/gallery/Screenshot1.png",
-            "https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/gallery/Screenshot2.png",
-            "https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/gallery/Screenshot3.png",
-            "https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/gallery/Screenshot4.png",
-            "https://raw.githubusercontent.com/SuperGamer474/ProStore/refs/heads/main/gallery/Screenshot5.png"
+            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot1.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot2.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot3.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot4.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot5.png"
           ]'
 
           # Ensure base repo JSON exists
           if [ ! -f "$REPO_FILE" ]; then
             echo '{
               "name": "Official ProStore Repo",
-              "identifier": "com.supergamer474.prostore.repo",
-              "sourceURL": "https://github.com/SuperGamer474/ProStore",
+              "identifier": "com.prostoreios.prostore.repo",
+              "sourceURL": "https://github.com/ProStore-iOS/ProStore",
               "iconURL": "'"$ICON_URL"'",
-              "website": "https://supergamer474.github.io/ProStore",
-              "ipawebsite": "https://github.com/SuperGamer474/ProStore/releases",
+              "website": "https://ProStore-iOS.github.io/ProStore",
+              "ipawebsite": "https://github.com/ProStore-iOS/ProStore/releases",
               "subtitle": "The BEST alternative app store for iOS!",
               "META": {
                 "repoName": "Official ProStore Repo",
