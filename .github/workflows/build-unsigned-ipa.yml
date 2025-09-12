@@ -414,9 +414,9 @@ jobs:
             echo '{
               "name": "Official ProStore Repo",
               "identifier": "com.prostoreios.prostore.repo",
-              "sourceURL": "https://github.com/ProStore-iOS/ProStore",
+              "sourceURL": "https://ProStore-iOS.github.io/apps.json",
               "iconURL": "'"$ICON_URL"'",
-              "website": "https://ProStore-iOS.github.io/ProStore",
+              "website": "https://ProStore-iOS.github.io",
               "ipawebsite": "https://github.com/ProStore-iOS/ProStore/releases",
               "subtitle": "The BEST alternative app store for iOS!",
               "META": {
