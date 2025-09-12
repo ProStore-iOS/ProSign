@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.0.2",
+          "date": "2025-09-12T07:38:59+0000",
+          "localizedDescription": "What's new in Version 1.0.2?\n- Update to v1.0.2\n- Fix ProStore repository JSON and create prostore.swift",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.0.2/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 1433088,
+          "sha256": "a02c89ab354996f9bb859d47c2bdc5cdb1521af40ddc97b2815bc5afb3c9c541",
+          "minOSVersion": "15.0",
+          "fullDate": "20250912073859"
+        },
+        {
           "version": "1.0.1",
           "date": "2025-09-12T07:24:03+0000",
           "localizedDescription": "What's new in Version 1.0.1?\n- Update Workflow File\n- Update ProStore app URLs in README\n- Create index.html for Github Pages\n- Modify Jekyll source directory in deployment workflow\n- Update GitHub Actions workflow for Jekyll site\n- Add script to fetch JSON data in index.html\n- Fix HTML encoding and update fetch URL\n- Add apps directory to website\n- Update and rename apps to apps.json\n- Update apps.json to include app-repo.json\n- Modify workflow to include app-repo.json and copy it\n- Fix include path in apps.json\n- Delete website directory\n- Delete .github/workflows/jekyll-gh-pages.yml",
