@@ -1,7 +1,7 @@
 # The ProStore app for iOS
 ![Development Status](https://img.shields.io/badge/status-in%20development-yellow)  
 The best alternative App Store for iOS!  
-ProStore app source URL: https://prostore.is-best.net/apps
+ProStore app source URL: https://prostore-ios.github.io/apps.json
 
 <img src="https://github.com/ProStore-iOS/ProStore/blob/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png?raw=true" width="200" />
 
