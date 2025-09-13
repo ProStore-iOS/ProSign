@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.0.3",
+          "date": "2025-09-13T00:10:52+0000",
+          "localizedDescription": "What's new in Version 1.0.3?\n- Update to v1.0.3 test",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.0.3/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 1460316,
+          "sha256": "ca35403970a891543befdca0b502d189548b2ed927eb526e90c85a26d79bad3c",
+          "minOSVersion": "15.0",
+          "fullDate": "20250913001052"
+        },
+        {
           "version": "1.0.2",
           "date": "2025-09-12T07:38:59+0000",
           "localizedDescription": "What's new in Version 1.0.2?\n- Update to v1.0.2\n- Fix ProStore repository JSON and create prostore.swift",
