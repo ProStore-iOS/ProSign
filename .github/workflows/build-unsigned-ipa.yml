@@ -1,4 +1,4 @@
-name: Build unsigned ProStore iOS .ipa
+name: Build ProStore iOS (Unsigned)
 
 on:
   workflow_dispatch:
