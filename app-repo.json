@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.4",
+          "date": "2025-09-14T04:28:11+0000",
+          "localizedDescription": "What's new in Version 1.1.4?\n- Fix release creation in workflow",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.4/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3467462,
+          "sha256": "6c7e81eb4fdb71b97f88b4f41598eced99ee412b23ad1b526b9235ca11c8bb0c",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914042811"
+        },
+        {
           "version": "1.1.3",
           "date": "2025-09-14T04:19:15+0000",
           "localizedDescription": "What's new in Version 1.1.3?\n- Minor UI improvements and update workflow file",
