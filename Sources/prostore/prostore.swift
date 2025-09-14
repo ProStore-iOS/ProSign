@@ -32,19 +32,21 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             NavigationView {
-                AboutView()
-            }
-            .tabItem {
-                Image(systemName: "info.circle")
-                Text("About")
-            }
-
-            NavigationView {
                 SignerView()
             }
+            .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: "hammer")
                 Text("Signer")
+            }
+
+            NavigationView {
+                AboutView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+            .tabItem {
+                Image(systemName: "info.circle")
+                Text("About")
             }
         }
     }
@@ -78,10 +80,9 @@ struct AboutView: View {
         URL(string: "https://raw.githubusercontent.com/ProStore-iOS/ProStore/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png")
     }
 
+    // Only show the short version string (e.g. "1.1.0") to avoid trailing build numbers like "(6)"
     private var versionString: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
-        return build.isEmpty ? version : "\(version) (\(build))"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
     var body: some View {
