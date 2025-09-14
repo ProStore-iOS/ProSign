@@ -100,6 +100,7 @@ struct SignerView: View {
                 try fm.createDirectory(at: inputs, withIntermediateDirectories: true)
                 try fm.createDirectory(at: work, withIntermediateDirectories: true)
 
+                // keep original filenames when copying into inputs
                 let localIPA = inputs.appendingPathComponent(ipaURL.lastPathComponent)
                 let localP12 = inputs.appendingPathComponent(p12URL.lastPathComponent)
                 let localProv = inputs.appendingPathComponent(provURL.lastPathComponent)
@@ -153,7 +154,11 @@ struct SignerView: View {
 
                                 progressMessage = "Zipping signed IPA 📦"
                                 do {
-                                    let signedIpa = tmpRoot.appendingPathComponent("signed_\(UUID().uuidString).ipa")
+                                    // Use the original IPA name (without .ipa) as the prefix for the final file
+                                    let originalBase = ipaURL.deletingPathExtension().lastPathComponent
+                                    let finalFileName = "\(originalBase)_signed_\(UUID().uuidString).ipa"
+
+                                    let signedIpa = tmpRoot.appendingPathComponent(finalFileName)
                                     let writeArchive = try Archive(url: signedIpa, accessMode: .create)
 
                                     let enumerator = fm.enumerator(at: work, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
@@ -177,7 +182,7 @@ struct SignerView: View {
                                     }
 
                                     let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
-                                    let outURL = docs.appendingPathComponent("signed_\(UUID().uuidString).ipa")
+                                    let outURL = docs.appendingPathComponent(finalFileName)
                                     if fm.fileExists(atPath: outURL.path) { try fm.removeItem(at: outURL) }
                                     try fm.copyItem(at: signedIpa, to: outURL)
 
