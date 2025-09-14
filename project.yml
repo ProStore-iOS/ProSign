@@ -8,10 +8,6 @@ configs:
   Release: release
 
 packages:
-  ProSourceManager:
-    url: https://github.com/ProStore-iOS/ProSourceManager.git
-    branch: main
-
   ZsignPackage:
     url: https://github.com/khcrysalis/Zsign-Package.git
     branch: package
@@ -42,8 +38,6 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     dependencies:
-      - package: ProSourceManager
-        product: ProSourceManager
       - package: ZsignPackage
         product: ZsignSwift
       - package: ZIPFoundation
