@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.0.4",
+          "date": "2025-09-14T02:35:57+0000",
+          "localizedDescription": "What's new in Version 1.0.4?\n- Rewrite prostore.swift\n- Test release for zsign\n- Update to use ZsignSwift instead of Zsign\n- Minor bug fixes\n- Remove ProSourceManager\n- More minor bug fixes\n- Even more bug fixes\n- More bug fixes\n- Fixes and improvements",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.0.4/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3445572,
+          "sha256": "99833e07790b81290b972bfa1b60473e0c45402b59960b9de288ba5302613391",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914023557"
+        },
+        {
           "version": "1.0.3",
           "date": "2025-09-13T00:10:52+0000",
           "localizedDescription": "What's new in Version 1.0.3?\n- Update to v1.0.3 test",
