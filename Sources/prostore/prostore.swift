@@ -28,7 +28,16 @@ struct ContentView: View {
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind?
     
-    enum PickerKind { case ipa, p12, prov }
+    enum PickerKind: Identifiable {
+        case first, second // your cases
+
+        var id: Int {
+            switch self {
+            case .first: return 0
+            case .second: return 1
+            }
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -115,7 +124,7 @@ struct ContentView: View {
                 
                 // unzip IPA -> tmp
                 let archive = try Archive(url: localIPA, accessMode: .read)
-                try archive.extract(to: tmp)
+                try archive.extract(entry, to: tmp)
                 
                 // find Payload/*.app
                 let payload = tmp.appendingPathComponent("Payload")
