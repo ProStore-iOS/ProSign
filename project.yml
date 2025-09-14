@@ -45,6 +45,6 @@ targets:
       - package: ProSourceManager
         product: ProSourceManager
       - package: ZsignPackage
-        product: Zsign
+        product: ZsignSwift
       - package: ZIPFoundation
         product: ZIPFoundation

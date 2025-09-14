@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import ZIPFoundation // ZipFoundation
-import Zsign        // your Swift package that exports `Zsign`
+import ZsignSwift
 
 struct FileItem {
     var url: URL?
@@ -132,7 +132,7 @@ struct ContentView: View {
                 DispatchQueue.main.async { message = "Signing \(appName)..." }
                 
                 // NOTE: match your Zsign API exactly. This call mirrors the wrapper you posted earlier:
-                let ok = Zsign.sign(
+                let ok = ZsignSwift.sign(
                     appPath: appDir.path,
                     provisionPath: localProv.path,
                     p12Path: localP12.path,
