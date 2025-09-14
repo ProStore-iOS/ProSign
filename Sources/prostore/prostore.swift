@@ -177,14 +177,28 @@ struct ContentView: View {
                             with: relative + "/",
                             type: .directory,
                             uncompressedSize: 0,
+                            modificationDate: Date(),
+                            permissions: nil,
                             compressionMethod: .deflate,
+                            bufferSize: 16 * 1024,
+                            progress: nil,
                             provider: { _, _ in Data() }
                         )
                     } else {
                         let data = try Data(contentsOf: file)
-                        try writeArchive.addEntry(with: relative, type: .file, uncompressedSize: UInt32(data.count), compressionMethod: .deflate, provider: { (position, size) -> Data in
-                            return data.subdata(in: Int(position)..<Int(position + size))
-                        })
+                        try writeArchive.addEntry(
+                            with: relative,
+                            type: .file,
+                            uncompressedSize: UInt32(data.count),
+                            modificationDate: Date(),
+                            permissions: nil,
+                            compressionMethod: .deflate,
+                            bufferSize: 16 * 1024,
+                            progress: nil,
+                            provider: { (position, size) in
+                                data.subdata(in: Int(position)..<Int(position + size))
+                            }
+                        )
                     }
                 }
                 
