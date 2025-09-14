@@ -414,7 +414,8 @@ jobs:
           gh release create "$TAG" \
             "$DEVICE_IPA" $SIM_ARG \
             --title "ProStore v$VERSION" \
-            --notes "$CHANGELOG"
+            --notes "$CHANGELOG" \
+            --repo "$GITHUB_REPOSITORY"
         shell: bash
 
   create-app-source-json:
