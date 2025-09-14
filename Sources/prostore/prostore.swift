@@ -173,7 +173,13 @@ struct ContentView: View {
                 for case let file as URL in enumerator {
                     let relative = file.path.replacingOccurrences(of: tmp.path + "/", with: "")
                     if file.hasDirectoryPath {
-                        try writeArchive.addEntry(with: relative + "/", type: .directory, uncompressedSize: 0, compressionMethod: .deflate) // directories recorded
+                        try writeArchive.addEntry(
+                            with: relative + "/",
+                            type: .directory,
+                            uncompressedSize: 0,
+                            compressionMethod: .deflate,
+                            provider: { _, _ in Data() }
+                        )
                     } else {
                         let data = try Data(contentsOf: file)
                         try writeArchive.addEntry(with: relative, type: .file, uncompressedSize: UInt32(data.count), compressionMethod: .deflate, provider: { (position, size) -> Data in
