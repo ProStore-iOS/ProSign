@@ -1,6 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import ZIPFoundation // ZipFoundation
+import ZIPFoundation
 import ZsignSwift
 
 struct FileItem {
@@ -13,6 +13,7 @@ struct ZsignOnDeviceApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .navigationViewStyle(StackNavigationViewStyle()) // Fix iPad sidebar bug
         }
     }
 }
@@ -23,7 +24,7 @@ struct ContentView: View {
     @State private var prov = FileItem()
     @State private var p12Password = ""
     @State private var isProcessing = false
-    @State private var message = ""
+    @State private var progressMessage = "Idle 😎"
     @State private var showActivity = false
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind?
@@ -68,7 +69,7 @@ struct ContentView: View {
                     Button(action: runSign) {
                         HStack {
                             Spacer()
-                            if isProcessing { ProgressView() }
+                            if isProcessing { ProgressView(progressMessage) }
                             Text("Sign IPA").bold()
                             Spacer()
                         }
@@ -77,10 +78,11 @@ struct ContentView: View {
                 }
 
                 Section(header: Text("Status")) {
-                    Text(message).foregroundColor(.primary)
+                    Text(progressMessage).foregroundColor(.primary)
                 }
             }
             .navigationTitle("Zsign On Device")
+            .navigationViewStyle(StackNavigationViewStyle()) // Fix iPad sidebar issue
             .sheet(item: $showPickerFor, onDismiss: nil) { kind in
                 DocumentPicker(kind: kind, onPick: { url in
                     switch kind {
@@ -102,57 +104,51 @@ struct ContentView: View {
 
     func runSign() {
         guard let ipaURL = ipa.url, let p12URL = p12.url, let provURL = prov.url else {
-            message = "Pick all input files first."
+            progressMessage = "Pick all input files first 😅"
             return
         }
+
         isProcessing = true
-        message = "Working..."
+        progressMessage = "Preparing files 📂"
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let fm = FileManager.default
-
-                // create unique temp root and separate subfolders to avoid collisions
                 let tmpRoot = fm.temporaryDirectory.appendingPathComponent("zsign_ios_\(UUID().uuidString)")
                 let inputs = tmpRoot.appendingPathComponent("inputs")
                 let work = tmpRoot.appendingPathComponent("work")
                 try fm.createDirectory(at: inputs, withIntermediateDirectories: true)
                 try fm.createDirectory(at: work, withIntermediateDirectories: true)
 
-                // copy inputs into inputs/
+                // Copy inputs
                 let localIPA = inputs.appendingPathComponent(ipaURL.lastPathComponent)
                 let localP12 = inputs.appendingPathComponent(p12URL.lastPathComponent)
                 let localProv = inputs.appendingPathComponent(provURL.lastPathComponent)
 
-                // remove destinations if they somehow already exist (defensive)
-                if fm.fileExists(atPath: localIPA.path) { try fm.removeItem(at: localIPA) }
-                if fm.fileExists(atPath: localP12.path) { try fm.removeItem(at: localP12) }
-                if fm.fileExists(atPath: localProv.path) { try fm.removeItem(at: localProv) }
+                [localIPA, localP12, localProv].forEach { if fm.fileExists(atPath: $0.path) { try? fm.removeItem(at: $0) } }
 
                 try fm.copyItem(at: ipaURL, to: localIPA)
                 try fm.copyItem(at: p12URL, to: localP12)
                 try fm.copyItem(at: provURL, to: localProv)
 
-                // unzip IPA -> work/ (extract each entry to explicit destination to avoid collisions)
+                DispatchQueue.main.async { progressMessage = "Unzipping IPA 🔓" }
+
+                // Unzip IPA -> work/
                 let archive = try Archive(url: localIPA, accessMode: .read)
                 for entry in archive {
-                    // Build destination URL under `work/` using the entry's path
                     let dest = work.appendingPathComponent(entry.path)
-                    // Ensure parent directory exists
                     try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
                     if entry.type == .directory {
-                        // create directory
                         try fm.createDirectory(at: dest, withIntermediateDirectories: true)
                     } else {
-                        // extract file to exact destination
                         try archive.extract(entry, to: dest)
                     }
                 }
 
-                // find Payload/*.app inside work/
+                // Locate Payload/*.app
                 let payload = work.appendingPathComponent("Payload")
                 guard fm.fileExists(atPath: payload.path) else {
-                    throw NSError(domain: "ZsignOnDevice", code: 1, userInfo: [NSLocalizedDescriptionKey: "Payload not found in IPA"])
+                    throw NSError(domain: "ZsignOnDevice", code: 1, userInfo: [NSLocalizedDescriptionKey: "Payload not found"])
                 }
                 let contents = try fm.contentsOfDirectory(atPath: payload.path)
                 guard let appName = contents.first(where: { $0.hasSuffix(".app") }) else {
@@ -160,85 +156,73 @@ struct ContentView: View {
                 }
                 let appDir = payload.appendingPathComponent(appName)
 
-                // Call Zsign.swift package sign API
-                DispatchQueue.main.async { message = "Signing \(appName)..." }
+                DispatchQueue.main.async { progressMessage = "Signing \(appName) ✍️" }
 
-                let ok = Zsign.sign(
-                    appPath: appDir.path,
-                    provisionPath: localProv.path,
-                    p12Path: localP12.path,
-                    p12Password: p12Password,
-                    entitlementsPath: "",
-                    customIdentifier: "",
-                    customName: "",
-                    customVersion: "",
-                    adhoc: false,
-                    removeProvision: false,
-                    completion: nil
-                )
-
-                guard ok else {
-                    throw NSError(domain: "ZsignOnDevice", code: 3, userInfo: [NSLocalizedDescriptionKey: "Zsign.sign returned false"])
-                }
-
-                // Rezip Payload -> signed IPA from the `work` folder so relative paths are correct
-                let signedIpa = tmpRoot.appendingPathComponent("signed_\(UUID().uuidString).ipa")
-                // ensure output folder exists (tmpRoot exists)
-                let writeArchive = try Archive(url: signedIpa, accessMode: .create)
-
-                // Walk `work` and collect directories & files
-                let enumerator = fm.enumerator(at: work, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
-                var directories: [URL] = []
-                var filesList: [URL] = []
-                for case let file as URL in enumerator {
-                    // Skip the work root itself
-                    if file == work { continue }
-                    let isDirResource = try file.resourceValues(forKeys: [.isDirectoryKey]).isDirectory ?? file.hasDirectoryPath
-                    if isDirResource {
-                        directories.append(file)
-                    } else {
-                        filesList.append(file)
-                    }
-                }
-
-                // Sort directories so parents come before children
-                directories.sort { $0.path.count < $1.path.count }
-
-                // Base for relative paths is `work`
-                let base = work
-
-                // Add directories first (ensure trailing slash)
-                for dir in directories {
-                    let relative = dir.path.replacingOccurrences(of: base.path + "/", with: "")
-                    let entryPath = relative.hasSuffix("/") ? relative : relative + "/"
-                    try writeArchive.addEntry(with: entryPath, relativeTo: base, compressionMethod: .none)
-                }
-
-                // Add files
-                for file in filesList {
-                    let relative = file.path.replacingOccurrences(of: base.path + "/", with: "")
-                    try writeArchive.addEntry(with: relative, relativeTo: base, compressionMethod: .deflate)
-                }
-
-                // Finalise: copy to Documents so user can share
-                let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
-                let outURL = docs.appendingPathComponent("signed_\(UUID().uuidString).ipa")
-                if fm.fileExists(atPath: outURL.path) { try fm.removeItem(at: outURL) }
-                try fm.copyItem(at: signedIpa, to: outURL)
-
+                // Zsign async
                 DispatchQueue.main.async {
-                    activityURL = outURL
-                    showActivity = true
-                    message = "Done — signed IPA ready to share!"
-                    isProcessing = false
+                    Zsign.sign(
+                        appPath: appDir.relativePath,
+                        provisionPath: localProv.path,
+                        p12Path: localP12.path,
+                        p12Password: p12Password,
+                        entitlementsPath: "",
+                        removeProvision: false,
+                        completion: { _, error in
+                            DispatchQueue.main.async {
+                                if let error = error {
+                                    progressMessage = "Signing failed ❌: \(error.localizedDescription)"
+                                    isProcessing = false
+                                    return
+                                }
+
+                                progressMessage = "Zipping signed IPA 📦"
+                                do {
+                                    let signedIpa = tmpRoot.appendingPathComponent("signed_\(UUID().uuidString).ipa")
+                                    let writeArchive = try Archive(url: signedIpa, accessMode: .create)
+
+                                    let enumerator = fm.enumerator(at: work, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
+                                    var directories: [URL] = []
+                                    var filesList: [URL] = []
+                                    for case let file as URL in enumerator {
+                                        if file == work { continue }
+                                        let isDir = (try? file.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? file.hasDirectoryPath
+                                        if isDir { directories.append(file) } else { filesList.append(file) }
+                                    }
+                                    directories.sort { $0.path.count < $1.path.count }
+                                    let base = work
+                                    for dir in directories {
+                                        let relative = dir.path.replacingOccurrences(of: base.path + "/", with: "")
+                                        let entryPath = relative.hasSuffix("/") ? relative : relative + "/"
+                                        try writeArchive.addEntry(with: entryPath, relativeTo: base, compressionMethod: .none)
+                                    }
+                                    for file in filesList {
+                                        let relative = file.path.replacingOccurrences(of: base.path + "/", with: "")
+                                        try writeArchive.addEntry(with: relative, relativeTo: base, compressionMethod: .deflate)
+                                    }
+
+                                    let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+                                    let outURL = docs.appendingPathComponent("signed_\(UUID().uuidString).ipa")
+                                    if fm.fileExists(atPath: outURL.path) { try fm.removeItem(at: outURL) }
+                                    try fm.copyItem(at: signedIpa, to: outURL)
+
+                                    activityURL = outURL
+                                    showActivity = true
+                                    progressMessage = "Done! ✅ IPA ready to share 🎉"
+                                    isProcessing = false
+
+                                    try? fm.removeItem(at: tmpRoot) // cleanup
+
+                                } catch {
+                                    progressMessage = "Error during zipping ❌: \(error.localizedDescription)"
+                                    isProcessing = false
+                                }
+                            }
+                        }
+                    )
                 }
-
-                // optional: cleanup tmp (comment out if you want to inspect)
-                try? fm.removeItem(at: tmpRoot)
-
             } catch {
                 DispatchQueue.main.async {
-                    message = "Error: \(error.localizedDescription)"
+                    progressMessage = "Error ❌: \(error.localizedDescription)"
                     isProcessing = false
                 }
             }
@@ -246,7 +230,7 @@ struct ContentView: View {
     }
 }
 
-// DocumentPicker wrapper for picking any file types
+// DocumentPicker wrapper
 struct DocumentPicker: UIViewControllerRepresentable {
     var kind: ContentView.PickerKind
     var onPick: (URL) -> Void
@@ -271,11 +255,11 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 }
 
+// ActivityView wrapper
 struct ActivityView: UIViewControllerRepresentable {
     let url: URL
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        return vc
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
     }
-    func updateUIViewController(_ uiActivityViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
