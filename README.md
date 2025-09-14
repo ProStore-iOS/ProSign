@@ -4,10 +4,11 @@ The best alternative App Store for iOS!
 ProStore app source URL: https://prostore-ios.github.io/apps.json
 
 <img src="https://github.com/ProStore-iOS/ProStore/blob/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png?raw=true" width="200" />
-
+<!--
 ## Gallery
 <img src="gallery/Screenshot1.png" width="550">&nbsp;
 <img src="gallery/Screenshot2.png" width="550">&nbsp;
 <img src="gallery/Screenshot3.png" width="550">&nbsp;
 <img src="gallery/Screenshot4.png" width="550">&nbsp;
 <img src="gallery/Screenshot5.png" width="550">
+-->
