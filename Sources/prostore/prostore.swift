@@ -3,28 +3,192 @@ import UniformTypeIdentifiers
 import ZIPFoundation
 import ZsignSwift
 
+// MARK: - Small models
 struct FileItem {
     var url: URL?
     var name: String { url?.lastPathComponent ?? "" }
 }
 
+struct Credit: Identifiable {
+    var id = UUID()
+    var name: String
+    var role: String
+    var profileURL: URL
+    var avatarURL: URL
+}
+
+// MARK: - App
 @main
 struct ZsignOnDeviceApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .navigationViewStyle(StackNavigationViewStyle()) // Fix iPad sidebar bug
+            MainTabView()
         }
     }
 }
 
-struct ContentView: View {
+// MARK: - Main tab view
+struct MainTabView: View {
+    var body: some View {
+        TabView {
+            NavigationView {
+                AboutView()
+            }
+            .tabItem {
+                Image(systemName: "info.circle")
+                Text("About")
+            }
+
+            NavigationView {
+                SignerView()
+            }
+            .tabItem {
+                Image(systemName: "hammer")
+                Text("Signer")
+            }
+        }
+    }
+}
+
+// MARK: - About view
+struct AboutView: View {
+    // credits data
+    private let credits: [Credit] = [
+        Credit(
+            name: "zhlynn",
+            role: "Original zsign",
+            profileURL: URL(string: "https://github.com/zhlynn")!,
+            avatarURL: URL(string: "https://github.com/zhlynn.png")!
+        ),
+        Credit(
+            name: "Khcrysalis",
+            role: "Zsign-Package (fork)",
+            profileURL: URL(string: "https://github.com/khcrysalis")!,
+            avatarURL: URL(string: "https://github.com/khcrysalis.png")!
+        ),
+        Credit(
+            name: "SuperGamer474",
+            role: "Developer",
+            profileURL: URL(string: "https://github.com/SuperGamer474")!,
+            avatarURL: URL(string: "https://github.com/SuperGamer474.png")!
+        )
+    ]
+
+    private var appIconURL: URL? {
+        URL(string: "https://raw.githubusercontent.com/ProStore-iOS/ProStore/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png")
+    }
+
+    private var versionString: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        return build.isEmpty ? version : "\(version) (\(build))"
+    }
+
+    var body: some View {
+        List {
+            VStack(spacing: 8) {
+                if let url = appIconURL {
+                    AsyncImage(url: url) { phase in
+                        if let img = phase.image {
+                            img
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .shadow(radius: 6)
+                        } else if phase.error != nil {
+                            // fallback
+                            Image(systemName: "app.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 80, height: 80)
+                                .foregroundColor(.secondary)
+                        } else {
+                            ProgressView()
+                                .frame(width: 80, height: 80)
+                        }
+                    }
+                }
+
+                Text("ProStore")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Text("Version \(versionString)")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .listRowInsets(EdgeInsets())
+
+            Section(header: Text("Credits")) {
+                ForEach(credits) { c in
+                    CreditRow(credit: c)
+                }
+            }
+
+            // optional sponsors or other sections can go here
+        }
+        .listStyle(InsetGroupedListStyle())
+        .navigationTitle("About")
+    }
+}
+
+struct CreditRow: View {
+    let credit: Credit
+    @Environment(\.openURL) var openURL
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: credit.avatarURL) { phase in
+                if let img = phase.image {
+                    img
+                        .resizable()
+                        .scaledToFill()
+                } else if phase.error != nil {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    ProgressView()
+                }
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(Color(UIColor.separator), lineWidth: 0.5))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(credit.name)
+                    .font(.body)
+                Text(credit.role)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                openURL(credit.profileURL)
+            } label: {
+                Image(systemName: "arrow.up.right.square")
+                    .imageScale(.large)
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(BorderlessButtonStyle())
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - SignerView (your original ContentView moved here)
+struct SignerView: View {
     @State private var ipa = FileItem()
     @State private var p12 = FileItem()
     @State private var prov = FileItem()
     @State private var p12Password = ""
     @State private var isProcessing = false
-    @State private var progressMessage = "Idle 😎"
+    @State private var progressMessage = ""
     @State private var showActivity = false
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind?
@@ -41,67 +205,64 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Inputs")) {
-                    HStack {
-                        Text("IPA:")
-                        Spacer()
-                        Text(ipa.name.isEmpty ? "none" : ipa.name).foregroundColor(.secondary)
-                        Button("Pick") { showPickerFor = .ipa }
-                    }
-                    HStack {
-                        Text("P12:")
-                        Spacer()
-                        Text(p12.name.isEmpty ? "none" : p12.name).foregroundColor(.secondary)
-                        Button("Pick") { showPickerFor = .p12 }
-                    }
-                    HStack {
-                        Text("MobileProvision:")
-                        Spacer()
-                        Text(prov.name.isEmpty ? "none" : prov.name).foregroundColor(.secondary)
-                        Button("Pick") { showPickerFor = .prov }
-                    }
-                    SecureField("P12 Password", text: $p12Password)
+        Form {
+            Section(header: Text("Inputs")) {
+                HStack {
+                    Text("IPA:")
+                    Spacer()
+                    Text(ipa.name.isEmpty ? "none" : ipa.name).foregroundColor(.secondary)
+                    Button("Pick") { showPickerFor = .ipa }
                 }
-
-                Section {
-                    Button(action: runSign) {
-                        HStack {
-                            Spacer()
-                            if isProcessing { ProgressView(progressMessage) }
-                            Text("Sign IPA").bold()
-                            Spacer()
-                        }
-                    }
-                    .disabled(isProcessing || ipa.url == nil || p12.url == nil || prov.url == nil)
+                HStack {
+                    Text("P12:")
+                    Spacer()
+                    Text(p12.name.isEmpty ? "none" : p12.name).foregroundColor(.secondary)
+                    Button("Pick") { showPickerFor = .p12 }
                 }
-
-                Section(header: Text("Status")) {
-                    Text(progressMessage).foregroundColor(.primary)
+                HStack {
+                    Text("MobileProvision:")
+                    Spacer()
+                    Text(prov.name.isEmpty ? "none" : prov.name).foregroundColor(.secondary)
+                    Button("Pick") { showPickerFor = .prov }
                 }
+                SecureField("P12 Password", text: $p12Password)
             }
-            .navigationTitle("Zsign On Device")
-            .navigationViewStyle(StackNavigationViewStyle()) // Fix iPad sidebar issue
-            .sheet(item: $showPickerFor, onDismiss: nil) { kind in
-                DocumentPicker(kind: kind, onPick: { url in
-                    switch kind {
-                    case .ipa: ipa.url = url
-                    case .p12: p12.url = url
-                    case .prov: prov.url = url
+
+            Section {
+                Button(action: runSign) {
+                    HStack {
+                        Spacer()
+                        Text("Sign IPA").bold()
+                        Spacer()
                     }
-                })
-            }
-            .sheet(isPresented: $showActivity) {
-                if let u = activityURL {
-                    ActivityView(url: u)
-                } else {
-                    Text("No file to share")
                 }
+                .disabled(isProcessing || ipa.url == nil || p12.url == nil || prov.url == nil)
+            }
+
+            Section(header: Text("Status")) {
+                Text(progressMessage).foregroundColor(.primary)
+            }
+        }
+        .navigationTitle("Signer")
+        .sheet(item: $showPickerFor, onDismiss: nil) { kind in
+            DocumentPicker(kind: kind, onPick: { url in
+                switch kind {
+                case .ipa: ipa.url = url
+                case .p12: p12.url = url
+                case .prov: prov.url = url
+                }
+            })
+        }
+        .sheet(isPresented: $showActivity) {
+            if let u = activityURL {
+                ActivityView(url: u)
+            } else {
+                Text("No file to share")
             }
         }
     }
 
+    // --- runSign same as your original; adapted to compile in this struct scope
     func runSign() {
         guard let ipaURL = ipa.url, let p12URL = p12.url, let provURL = prov.url else {
             progressMessage = "Pick all input files first 😅"
@@ -230,9 +391,9 @@ struct ContentView: View {
     }
 }
 
-// DocumentPicker wrapper
+// MARK: - DocumentPicker wrapper (same as yours)
 struct DocumentPicker: UIViewControllerRepresentable {
-    var kind: ContentView.PickerKind
+    var kind: SignerView.PickerKind
     var onPick: (URL) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -255,7 +416,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 }
 
-// ActivityView wrapper
+// MARK: - ActivityView wrapper
 struct ActivityView: UIViewControllerRepresentable {
     let url: URL
     func makeUIViewController(context: Context) -> UIActivityViewController {
