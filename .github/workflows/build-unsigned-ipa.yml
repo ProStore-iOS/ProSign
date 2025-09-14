@@ -1,4 +1,4 @@
-name: Build ProStore iOS (Unsigned)
+name: ProStore iOS Build and Release
 
 on:
   workflow_dispatch:
@@ -17,7 +17,10 @@ jobs:
   build-unsigned-ipa:
     runs-on: macos-15
     timeout-minutes: 60
-
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      release_exists: ${{ steps.check_release.outputs.exists }}
+      changelog: ${{ steps.generate_changelog.outputs.CHANGELOG }}
     steps:
       - name: Checkout repo (full history)
         uses: actions/checkout@v4
@@ -362,38 +365,102 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
+  create-github-release:
+    needs: build-unsigned-ipa
+    if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure gh exists (best-effort)
+        run: |
+          # gh (GitHub CLI)
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "gh not found — attempting official installer script"
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update
+            sudo apt install gh -y || true
+          fi
+
+          echo "gh: $(gh --version 2>/dev/null || echo 'not installed')"
+
+      - name: Download device IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: com.prostoreios.prostore-unsigned-ios.ipa
+          path: build
+
+      - name: Download simulator IPA artifact (optional)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: com.prostoreios.prostore-unsigned-iossimulator.ipa
+          path: build
+
       - name: Create GitHub Release
-        if: steps.check_release.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build-unsigned-ipa.outputs.version }}
+          CHANGELOG: ${{ needs.build-unsigned-ipa.outputs.changelog }}
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
           TAG="v$VERSION"
-          CHANGELOG="${{ steps.generate_changelog.outputs.CHANGELOG }}"
           echo "Creating release $TAG with notes:"
           printf '%s\n' "$CHANGELOG"
+          DEVICE_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
+          SIM_IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
+          SIM_ARG=""
+          if [ -f "$SIM_IPA" ]; then
+            SIM_ARG="$SIM_IPA"
+          fi
           gh release create "$TAG" \
-            build/com.prostoreios.prostore-unsigned-ios.ipa \
-            build/com.prostoreios.prostore-unsigned-iossimulator.ipa \
+            "$DEVICE_IPA" $SIM_ARG \
             --title "ProStore v$VERSION" \
             --notes "$CHANGELOG"
         shell: bash
 
+  create-app-source-json:
+    needs: build-unsigned-ipa
+    if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Ensure jq exists (best-effort)
+        run: |
+          # jq
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq not found — attempting to install"
+            sudo apt update
+            sudo apt install jq -y || true
+          fi
+
+          echo "jq: $(jq --version 2>/dev/null || echo 'not installed')"
+
+      - name: Download device IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: com.prostoreios.prostore-unsigned-ios.ipa
+          path: build
+
       - name: Update app-repo.json with latest ProStore version
-        if: steps.check_release.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build-unsigned-ipa.outputs.version }}
+          CHANGELOG: ${{ needs.build-unsigned-ipa.outputs.changelog }}
         run: |
           set -e
-          VERSION="${{ steps.get_version.outputs.version }}"
           IPA_PATH="$PWD/build/com.prostoreios.prostore-unsigned-ios.ipa"
           DOWNLOAD_URL="https://github.com/ProStore-iOS/ProStore/releases/download/v$VERSION/com.prostoreios.prostore-unsigned-ios.ipa"
           REPO_FILE="app-repo.json"
-          CHANGELOG="${{ steps.generate_changelog.outputs.CHANGELOG }}"
 
           if [ -f "$IPA_PATH" ]; then
-            IPA_SIZE=$(stat -f%z "$IPA_PATH")
-            SHA256=$(shasum -a 256 "$IPA_PATH" | awk '{print $1}')
+            IPA_SIZE=$(stat -c%s "$IPA_PATH")
+            SHA256=$(sha256sum "$IPA_PATH" | awk '{print $1}')
           else
             IPA_SIZE=0
             SHA256=""
@@ -502,12 +569,11 @@ jobs:
         shell: bash
 
       - name: Push apps.json to Pages repo (ProStore-iOS.github.io) using PAT
-        if: steps.check_release.outputs.exists == 'false'
         env:
           PAGES_PAT: ${{ secrets.PAGES_PAT }}
         run: |
           set -e
-          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION="${{ needs.build-unsigned-ipa.outputs.version }}"
           PAGES_REPO="ProStore-iOS/ProStore-iOS.github.io"
           PAGES_DIR=$(mktemp -d)
 

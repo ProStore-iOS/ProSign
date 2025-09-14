@@ -30,19 +30,19 @@ struct SignerView: View {
                 HStack {
                     Text("IPA:")
                     Spacer()
-                    Text(ipa.name.isEmpty ? "none" : ipa.name).foregroundColor(.secondary)
+                    Text(ipa.name.isEmpty ? "" : ipa.name).foregroundColor(.secondary)
                     Button("Pick") { showPickerFor = .ipa }
                 }
                 HStack {
                     Text("P12:")
                     Spacer()
-                    Text(p12.name.isEmpty ? "none" : p12.name).foregroundColor(.secondary)
+                    Text(p12.name.isEmpty ? "" : p12.name).foregroundColor(.secondary)
                     Button("Pick") { showPickerFor = .p12 }
                 }
                 HStack {
                     Text("MobileProvision:")
                     Spacer()
-                    Text(prov.name.isEmpty ? "none" : prov.name).foregroundColor(.secondary)
+                    Text(prov.name.isEmpty ? "" : prov.name).foregroundColor(.secondary)
                     Button("Pick") { showPickerFor = .prov }
                 }
                 SecureField("P12 Password", text: $p12Password)
