@@ -164,45 +164,54 @@ struct ContentView: View {
                 
                 // Zsign usually writes changes in-place inside the .app. Rezip Payload -> signed IPA
                 let signedIpa = tmp.appendingPathComponent("signed_\(appName).ipa")
-                // create archive with Payload directory
+                // ensure output folder exists
                 try fm.createDirectory(at: signedIpa.deletingLastPathComponent(), withIntermediateDirectories: true)
                 let writeArchive = try Archive(url: signedIpa, accessMode: .create)
                 
-                // recursively add Payload
-                let enumerator = fm.enumerator(at: payload, includingPropertiesForKeys: nil)!
+                // ===== Walk Payload and collect directories and files =====
+                let enumerator = fm.enumerator(at: payload, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
+                var directories: [URL] = []
+                var filesList: [URL] = []
                 for case let file as URL in enumerator {
-                    let relative = file.path.replacingOccurrences(of: tmp.path + "/", with: "")
-                    if file.hasDirectoryPath {
-                        try writeArchive.addEntry(
-                            with: relative + "/",
-                            type: .directory,
-                            uncompressedSize: 0,
-                            modificationDate: Date(),
-                            permissions: nil,
-                            compressionMethod: .deflate,
-                            bufferSize: 16 * 1024,
-                            progress: nil,
-                            provider: { _, _ in Data() }
-                        )
+                    // Skip the Payload root itself (we want entries relative to tmp)
+                    if file == payload { continue }
+                    let isDirResource = try file.resourceValues(forKeys: [.isDirectoryKey]).isDirectory ?? file.hasDirectoryPath
+                    if isDirResource {
+                        directories.append(file)
                     } else {
-                        let data = try Data(contentsOf: file)
-                        try writeArchive.addEntry(
-                            with: relative,
-                            type: .file,
-                            uncompressedSize: UInt32(data.count),
-                            modificationDate: Date(),
-                            permissions: nil,
-                            compressionMethod: .deflate,
-                            bufferSize: 16 * 1024,
-                            progress: nil,
-                            provider: { (position, size) in
-                                data.subdata(in: Int(position)..<Int(position + size))
-                            }
-                        )
+                        filesList.append(file)
                     }
                 }
                 
-                // share file (move to Documents to be easily accessible)
+                // Sort directories so parent directories come before children (shorter path first)
+                directories.sort { $0.path.count < $1.path.count }
+                
+                // Base for relative paths is tmp
+                let base = tmp
+                
+                // Add directories first (use .none compression and trailing slash)
+                for dir in directories {
+                    let relative = dir.path.replacingOccurrences(of: tmp.path + "/", with: "")
+                    // ensure trailing slash for directory entries inside zip
+                    let entryPath = relative.hasSuffix("/") ? relative : relative + "/"
+                    try writeArchive.addEntry(
+                        with: entryPath,
+                        relativeTo: base,
+                        compressionMethod: .none
+                    )
+                }
+                
+                // Add files (let ZIPFoundation read from disk)
+                for file in filesList {
+                    let relative = file.path.replacingOccurrences(of: tmp.path + "/", with: "")
+                    try writeArchive.addEntry(
+                        with: relative,
+                        relativeTo: base,
+                        compressionMethod: .deflate
+                    )
+                }
+                
+                // Finalise: copy to Documents so user can share
                 let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
                 let outURL = docs.appendingPathComponent("signed_\(UUID().uuidString).ipa")
                 if fm.fileExists(atPath: outURL.path) { try fm.removeItem(at: outURL) }
