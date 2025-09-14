@@ -144,12 +144,12 @@ struct ContentView: View {
                 DispatchQueue.main.async { message = "Signing \(appName)..." }
                 
                 // NOTE: match your Zsign API exactly. This call mirrors the wrapper you posted earlier:
-                let ok = ZsignSwift.sign(
+                let ok = Zsign.sign(
                     appPath: appDir.path,
                     provisionPath: localProv.path,
                     p12Path: localP12.path,
                     p12Password: p12Password,
-                    entitlementsPath: "", // optional
+                    entitlementsPath: "",
                     customIdentifier: "",
                     customName: "",
                     customVersion: "",
