@@ -9,10 +9,10 @@ ProStore app source URL: https://prostore-ios.github.io/apps.json
 
 ## Install ProStore
 
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=altstore&path=source">Add to AltStore</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=sidestore&path=source">Add to SideStore</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=esign&path=addsource">Add to ESign</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=scarlet&path=repo">Add to Scarlet</a>
+- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=altstore">Add to AltStore</a>  
+- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=sidestore">Add to SideStore</a>  
+- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=esign">Add to ESign</a>  
+- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=scarlet">Add to Scarlet</a>
 
 ---
 
