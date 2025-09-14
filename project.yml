@@ -12,6 +12,14 @@ packages:
     url: https://github.com/ProStore-iOS/ProSourceManager.git
     branch: main
 
+  ZsignPackage:
+    url: https://github.com/khcrysalis/Zsign-Package.git
+    branch: package
+
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    branch: main
+
 targets:
   prostore:
     type: application
@@ -28,7 +36,7 @@ targets:
         CFBundleDisplayName: "ProStore"
         CFBundleName: "prostore"
         CFBundleVersion: "4"
-        CFBundleShortVersionString: "1.0.3"
+        CFBundleShortVersionString: "1.0.4"
         UILaunchStoryboardName: "LaunchScreen"
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
@@ -36,3 +44,7 @@ targets:
     dependencies:
       - package: ProSourceManager
         product: ProSourceManager
+      - package: ZsignPackage
+        product: Zsign
+      - package: ZIPFoundation
+        product: ZIPFoundation
