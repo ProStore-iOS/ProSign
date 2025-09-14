@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.1",
+          "date": "2025-09-14T03:45:55+0000",
+          "localizedDescription": "What's new in Version 1.1.1?\n- Minor bug fixes\n- Update to version 1.1.0",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.1/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3466905,
+          "sha256": "c16d5615fd9c61149c402046554d2fe64da6b388c002e4701874c081d3d1adc0",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914034555"
+        },
+        {
           "version": "1.1.0",
           "date": "2025-09-14T03:32:02+0000",
           "localizedDescription": "What's new in Version 1.1.0?\n- Update to version 1.1.0\n- Update ProStore to have multi-view with 'Signer' and 'About'\n- Update to ProStore v1.1.",
