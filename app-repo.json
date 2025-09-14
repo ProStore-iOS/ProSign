@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.3",
+          "date": "2025-09-14T04:19:15+0000",
+          "localizedDescription": "What's new in Version 1.1.3?\n- Minor UI improvements and update workflow file",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.3/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3467463,
+          "sha256": "f3967832ccd1598549e6e16fb8ddda847eccc32cd526bf276286eb8dbdf6c466",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914041915"
+        },
+        {
           "version": "1.1.2",
           "date": "2025-09-14T04:04:19+0000",
           "localizedDescription": "What's new in Version 1.1.2?\n- Update to v1.1.2",
