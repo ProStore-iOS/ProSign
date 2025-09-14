@@ -37,6 +37,8 @@ targets:
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
     dependencies:
       - package: ZsignPackage
         product: ZsignSwift
