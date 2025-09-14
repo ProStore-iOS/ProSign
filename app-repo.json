@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.5",
+          "date": "2025-09-14T08:31:41+0000",
+          "localizedDescription": "What's new in Version 1.1.5?\n- Minor bug fix\n- Comment out gallery section in README\n- Update README with installation instructions\n- Fix links for adding ProStore to various apps\n- Update final .ipa name",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.5/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3467813,
+          "sha256": "2eb0eeca3ebef9f08f99de01acf64d7d9210f9cc9d4aee4525bb4fd780c87177",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914083141"
+        },
+        {
           "version": "1.1.4",
           "date": "2025-09-14T04:28:11+0000",
           "localizedDescription": "What's new in Version 1.1.4?\n- Fix release creation in workflow",
