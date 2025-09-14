@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.0",
+          "date": "2025-09-14T03:32:02+0000",
+          "localizedDescription": "What's new in Version 1.1.0?\n- Update to version 1.1.0\n- Update ProStore to have multi-view with 'Signer' and 'About'\n- Update to ProStore v1.1.",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.0/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3466667,
+          "sha256": "ae6d276937e52f2ff068cdcc1a89e1cb2949333df755815fcba685d55c46b3b3",
+          "minOSVersion": "15.0",
+          "fullDate": "20250914033202"
+        },
+        {
           "version": "1.0.5",
           "date": "2025-09-14T03:08:18+0000",
           "localizedDescription": "What's new in Version 1.0.5?\n- Update to v1.0.5\n- More minor bug fixes\n- Even more bug fixes\n- More bug fixes\n- Fixes and improvements\n- Rewrite prostore.swift\n- Fix temp file name collisions by separating input and work folders and adding safe copy/extract checks\n- Fix iPad sidebar issue on iOS 15+, implement async Zsign signing with safe temp workflow, add emoji-based progress HUD and full unzip → sign → zip → share flow",
