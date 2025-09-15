@@ -506,7 +506,7 @@ jobs:
           fi
 
           VERSION_DATE_ISO=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
-          MIN_OS="15.0"
+          MIN_OS="16.0"
           FULL_DATE=$(date +%Y%m%d%H%M%S)
 
           ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"

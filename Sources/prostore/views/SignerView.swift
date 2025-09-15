@@ -13,7 +13,7 @@ struct SignerView: View {
     @State private var showPickerFor: PickerKind?
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Inputs")
                             .font(.headline) // Bolder, larger header

@@ -10,7 +10,7 @@ struct CertificateView: View {
     @State private var showPickerFor: PickerKind? = nil
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Inputs")
                             .font(.headline) // Bolder, larger header

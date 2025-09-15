@@ -12,28 +12,25 @@ struct ProStore: App {
 struct MainTabView: View {
     var body: some View {
         TabView {
-            NavigationView {
+            NavigationStack {
                 SignerView()
             }
-            .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: "hammer")
                 Text("Signer")
             }
 
-            NavigationView {
+            NavigationStack {
                 CertificateView()
             }
-            .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: "key")
                 Text("Certificates")
             }
 
-            NavigationView {
+            NavigationStack {
                 AboutView()
             }
-            .navigationViewStyle(StackNavigationViewStyle())
             .tabItem {
                 Image(systemName: "info.circle")
                 Text("About")

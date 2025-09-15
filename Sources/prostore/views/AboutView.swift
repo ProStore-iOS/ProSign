@@ -39,7 +39,7 @@ struct AboutView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 VStack(spacing: 12) {
                     if let url = appIconURL {

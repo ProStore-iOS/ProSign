@@ -19,19 +19,19 @@ targets:
   prostore:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     sources: [Sources/prostore]
     bundleId: com.prostoreios.prostore
     settings:
-      IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+      IPHONEOS_DEPLOYMENT_TARGET: "16.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
     info:
       path: "Info.plist"
       properties:
         CFBundleDisplayName: "ProStore"
         CFBundleName: "prostore"
-        CFBundleVersion: "18"
-        CFBundleShortVersionString: "1.2.2"
+        CFBundleVersion: "19"
+        CFBundleShortVersionString: "1.3.0"
         UILaunchStoryboardName: "LaunchScreen"
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
