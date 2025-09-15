@@ -107,16 +107,14 @@ jobs:
           restore-keys: |
             swift-packages-${{ runner.os }}-
 
-      - name: Resolve Swift Packages
+      - name: Resolve Swift Packages (Auto)
         run: |
           set -e
-          echo "Resolving Swift package dependencies for prostore (cached)..."
+          echo "Resolving Swift package dependencies for prostore..."
           xcodebuild -resolvePackageDependencies \
             -project prostore.xcodeproj \
             -scheme prostore \
-            -configuration Release \
-            -skipPackageUpdates \
-            -onlyUsePackageVersionsFromResolvedFile
+            -configuration Release
 
       - name: Build IPA
         id: cache_object_version
