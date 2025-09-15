@@ -21,6 +21,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
       release_exists: ${{ steps.check_release.outputs.exists }}
       changelog: ${{ steps.generate_changelog.outputs.CHANGELOG }}
+      cached_object_version: ${{ steps.cache_object_version.outputs.object_version }}
     steps:
       - name: Checkout repo (full history)
         uses: actions/checkout@v4
@@ -103,12 +104,48 @@ jobs:
           echo "Resolving Swift package dependencies for prostore..."
           xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
 
-      - name: Try building archive, auto-fix objectVersion on future-format error
+      - name: Try cached objectVersion first, then fallback to candidates
+        id: cache_object_version
         run: |
           set -e
           ARCHIVE_PATH="$PWD/build/prostore.xcarchive"
           mkdir -p build
+          
+          # Try to read cached objectVersion from file
+          CACHE_FILE=".object_version_cache"
+          CACHED_VERSION=""
           candidates=(77 70 63 60 56 55)
+          
+          if [ -f "$CACHE_FILE" ]; then
+            CACHED_VERSION=$(cat "$CACHE_FILE" | tr -d '\n')
+            echo "Found cached objectVersion: $CACHED_VERSION"
+            
+            # Test the cached version first
+            echo "----- Testing cached objectVersion = $CACHED_VERSION -----"
+            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $CACHED_VERSION;/" -i.bak prostore.xcodeproj/project.pbxproj || true
+            
+            set +e
+            xcodebuild clean archive \
+              -project prostore.xcodeproj \
+              -scheme prostore \
+              -archivePath "$ARCHIVE_PATH" \
+              -sdk iphoneos \
+              -configuration Release \
+              CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+            rc=$?
+            set -e
+            
+            if [ $rc -eq 0 ]; then
+              echo "✅ Cached objectVersion $CACHED_VERSION works!"
+              echo "object_version=$CACHED_VERSION" >> $GITHUB_OUTPUT
+              echo "$CACHED_VERSION" > "$CACHE_FILE"
+              exit 0
+            else
+              echo "❌ Cached objectVersion $CACHED_VERSION failed, trying other candidates..."
+            fi
+          fi
+          
+          # If no cache or cached version failed, try all candidates
           build_ok=0
           for v in "${candidates[@]}"; do
             echo "----- Attempting build with objectVersion = $v -----"
@@ -127,15 +164,17 @@ jobs:
             rc=$?
             set -e
             if [ $rc -eq 0 ]; then
-              echo "xcodebuild succeeded with objectVersion = $v"
+              echo "✅ xcodebuild succeeded with objectVersion = $v"
+              echo "object_version=$v" >> $GITHUB_OUTPUT
+              echo "$v" > "$CACHE_FILE"
+              echo "Cached successful objectVersion: $v"
               build_ok=1
               break
             else
-              echo "xcodebuild failed (exit $rc). Logging last 200 lines from DiagnosticReports (if present):"
-              tail -n 200 /Users/runner/Library/Logs/DiagnosticReports/* 2>/dev/null || true
-              echo "Trying next objectVersion..."
+              echo "❌ xcodebuild failed (exit $rc). Trying next objectVersion..."
             fi
           done
+          
           if [ "$build_ok" -ne 1 ]; then
             echo "ERROR: All objectVersion attempts failed. Dumping debug info:"
             echo "===== project.pbxproj header ====="
