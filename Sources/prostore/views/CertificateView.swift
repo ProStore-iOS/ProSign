@@ -75,7 +75,7 @@ struct CertificateView: View {
                 let p12Data = try Data(contentsOf: p12URL)
                 let provData = try Data(contentsOf: provURL)
 
-                let result = CertificatesManager.check(p12Data: p12Data, password: p12Password, MobileprovisonData: provData)
+                let result = CertificatesManager.check(p12Data: p12Data, password: p12Password, mobileProvisionData: provData)
 
                 DispatchQueue.main.async {
                     isProcessing = false
