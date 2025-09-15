@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.7",
+          "date": "2025-09-15T07:45:00+0000",
+          "localizedDescription": "What's new in Version 1.1.7?\n- Remove CMSDecoder dependency as it is failing us\n- Fix OpenSSL stack pointer handling and CFError -> NSError casting in certificates.swift\n- Update to v1.1.6\n- Update workflow so it doesn't build xcodegen from source every time\n- Add OpenSSL as a package\n- Attempt to fix duplicate package bug\n- Update to v1.1.7\n- Bug fixes\n- Another attempt to fix a pesky bug\n- Add HEADER_SEARCH_PATHS\n- Remove openSSL and only use Apple APIs",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.7/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3486246,
+          "sha256": "7957e230f6c515629f910228e149cd491f28e80f6ec13cb3d22d9f11e87b2db1",
+          "minOSVersion": "15.0",
+          "fullDate": "20250915074500"
+        },
+        {
           "version": "1.1.5",
           "date": "2025-09-14T08:31:41+0000",
           "localizedDescription": "What's new in Version 1.1.5?\n- Minor bug fix\n- Comment out gallery section in README\n- Update README with installation instructions\n- Fix links for adding ProStore to various apps\n- Update final .ipa name",
