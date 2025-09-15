@@ -102,7 +102,7 @@ jobs:
         uses: actions/cache@v3
         id: swift-packages
         with:
-          path: ~/Library/Developer/Xcode/DerivedData/ProStore/SourcePackages
+          path: ${{ github.workspace }}/DerivedData/ProStore/SourcePackages
           key: swift-packages-${{ runner.os }}-${{ hashFiles('project.yml') }}
           restore-keys: |
             swift-packages-${{ runner.os }}-
@@ -114,7 +114,8 @@ jobs:
           xcodebuild -resolvePackageDependencies \
             -project prostore.xcodeproj \
             -scheme prostore \
-            -configuration Release
+            -configuration Release \
+            -derivedDataPath "$PWD/DerivedData" 
 
       - name: Build IPA
         id: cache_object_version
