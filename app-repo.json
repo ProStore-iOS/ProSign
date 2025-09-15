@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.9",
+          "date": "2025-09-15T08:31:07+0000",
+          "localizedDescription": "What's new in Version 1.1.9?\n- Replace MobileprovisonData with mobileProvisionData\n- Move UIComponents to UIComponents.swift\n- Update workflow to reuse cached candidates\n- Update workflow names, minor UI changes, and update to v1.1.9\n- Update ProStore",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.9/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3483751,
+          "sha256": "a48fb3ebbd642c713912dcaafaf827c3ee07c935c7c35cf4b8a434970d48cf1e",
+          "minOSVersion": "15.0",
+          "fullDate": "20250915083107"
+        },
+        {
           "version": "1.1.8",
           "date": "2025-09-15T08:16:24+0000",
           "localizedDescription": "What's new in Version 1.1.8?\n- Move UIComponents to UIComponents.swift\n- Remove CMSDecoder dependency as it is failing us\n- Refactor signing logic into SigningManager with modular file operations\n- Update to v1.1.8",
