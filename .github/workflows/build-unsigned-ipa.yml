@@ -98,24 +98,11 @@ jobs:
           echo "project.pbxproj header (first 60 lines):"
           sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
 
-      - name: Resolve Swift Packages (Auto)
+      - name: Resolve Swift Packages
         run: |
           set -e
           echo "Resolving Swift package dependencies for prostore..."
-          xcodebuild -resolvePackageDependencies \
-            -project prostore.xcodeproj \
-            -scheme prostore \
-            -configuration Release \
-            -derivedDataPath "$PWD/DerivedData" 
-
-      - name: Cache Swift Packages
-        uses: actions/cache@v3
-        id: swift-packages
-        with:
-          path: DerivedData/SourcePackages
-          key: swift-packages-${{ runner.os }}-${{ hashFiles('project.yml') }}
-          restore-keys: |
-            swift-packages-${{ runner.os }}-
+          xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
 
       - name: Build IPA
         id: cache_object_version
