@@ -10,7 +10,7 @@ struct CertificateView: View {
     @State private var p12Password = ""
     @State private var isProcessing = false
     @State private var statusMessage = "" // will hold exactly one of: "Incorrect Password", "P12 and MOBILEPROVISION do not match", "Success!"
-    @State private var showPickerFor: SignerView.PickerKind? = nil // reuse PickerKind from SignerView
+    @State private var showPickerFor: PickerKind? = nil
 
     var body: some View {
         Form {

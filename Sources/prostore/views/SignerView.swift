@@ -12,17 +12,6 @@ struct SignerView: View {
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind?
 
-    enum PickerKind: Identifiable {
-        case ipa, p12, prov
-        var id: Int {
-            switch self {
-            case .ipa: return 0
-            case .p12: return 1
-            case .prov: return 2
-            }
-        }
-    }
-
     var body: some View {
         Form {
             Section(header: Text("Inputs")) {
