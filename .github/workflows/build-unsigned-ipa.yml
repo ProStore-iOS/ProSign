@@ -115,7 +115,8 @@ jobs:
             -project prostore.xcodeproj \
             -scheme prostore \
             -configuration Release \
-            -skip-current
+            -skipPackageUpdates \
+            -onlyUsePackageVersionsFromResolvedFile
 
       - name: Build IPA
         id: cache_object_version
