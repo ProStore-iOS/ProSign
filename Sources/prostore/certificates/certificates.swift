@@ -15,7 +15,6 @@ public enum CertificateError: Error {
     case noCertsInProvision
     case publicKeyExportFailed(OSStatus)
     case unsupportedPlatform
-    case opensslError(String)
 }
 
 public final class CertificatesManager {
@@ -30,11 +29,11 @@ public final class CertificatesManager {
         guard let secKey = SecCertificateCopyKey(cert) else {
             throw CertificateError.certExtractionFailed
         }
+
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                // Fixed: Force cast CFError to NSError
-                let nsError = cfError as! NSError
+                let nsError = cfError as NSError
                 throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
@@ -43,67 +42,39 @@ public final class CertificatesManager {
         return keyData
     }
 
-    // Parse PKCS#7 (DER) from the mobileprovision using OpenSSL functions,
-    // convert X509 -> DER -> SecCertificate
+    // Parse PKCS#7 (DER) from the mobileprovision using Security's CMSDecoder,
+    // convert to SecCertificate array (no OpenSSL required)
     private static func certificatesFromMobileProvision(_ data: Data) throws -> [SecCertificate] {
-        var certs: [SecCertificate] = []
-
-        // Create BIO from data
-        let bio = data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> OpaquePointer? in
-            guard let base = ptr.baseAddress else { return nil }
-            return BIO_new_mem_buf(UnsafeMutableRawPointer(mutating: base), Int32(data.count))
+        // Create decoder
+        var decoderOptional: CMSDecoder?
+        var status = CMSDecoderCreate(&decoderOptional)
+        guard status == errSecSuccess, let decoder = decoderOptional else {
+            throw CertificateError.certExtractionFailed
         }
 
-        guard let bioPtr = bio else {
-            throw CertificateError.opensslError("BIO_new_mem_buf failed")
+        // Feed data into decoder
+        let updateStatus: OSStatus = data.withUnsafeBytes { (rawPtr: UnsafeRawBufferPointer) in
+            guard let base = rawPtr.baseAddress else { return errSecParam }
+            return CMSDecoderUpdateMessage(decoder, base.assumingMemoryBound(to: UInt8.self), data.count)
         }
-        defer { BIO_free(bioPtr) }
-
-        guard let p7 = d2i_PKCS7_bio(bioPtr, nil) else {
-            throw CertificateError.opensslError("d2i_PKCS7_bio failed")
+        guard updateStatus == errSecSuccess else {
+            throw CertificateError.certExtractionFailed
         }
-        defer { PKCS7_free(p7) }
 
-        // Get signers (stack of X509). PKCS7_get0_signers often returns an allocated stack pointer.
-        guard let signers = PKCS7_get0_signers(p7, nil, 0) else {
+        // Finalize
+        status = CMSDecoderFinalizeMessage(decoder)
+        guard status == errSecSuccess else {
+            throw CertificateError.certExtractionFailed
+        }
+
+        // Extract all certificates
+        var certsCF: CFArray?
+        status = CMSDecoderCopyAllCerts(decoder, &certsCF)
+        guard status == errSecSuccess, let certsArray = certsCF as? [SecCertificate], !certsArray.isEmpty else {
             throw CertificateError.noCertsInProvision
         }
 
-        // Fixed: Proper cast for signers to OpaquePointer (assuming signers is UnsafeMutableRawPointer)
-        let stackPtr = OpaquePointer(UnsafeMutableRawPointer(signers))
-
-        // Use OPENSSL_sk_num and OPENSSL_sk_value with proper index types
-        let count = Int(OPENSSL_sk_num(stackPtr))
-        for i in 0..<count {
-            guard let rawVal = OPENSSL_sk_value(stackPtr, Int32(i)) else { continue }
-            // rawVal is UnsafeMutableRawPointer; interpret as X509*
-            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)
-
-            // convert X509 -> DER
-            var derPtr: UnsafeMutablePointer<UInt8>? = nil
-            let derLen = i2d_X509(x509Ptr, &derPtr)
-            guard derLen > 0, let dptr = derPtr else { continue }
-            // wrap into Data
-            let derData = Data(bytes: dptr, count: Int(derLen))
-            // free OpenSSL buffer produced by i2d_X509
-            OPENSSL_free(dptr)
-
-            // create SecCertificate from DER
-            if let secCert = SecCertificateCreateWithData(nil, derData as CFData) {
-                certs.append(secCert)
-            } else {
-                // skip if cannot create
-                continue
-            }
-        }
-
-        // Fixed warning: Safer way to cast the free func without unsafeBitCast
-        OPENSSL_sk_pop_free(stackPtr) { ptr in
-            X509_free(OpaquePointer(ptr))
-        }
-
-        guard certs.count > 0 else { throw CertificateError.noCertsInProvision }
-        return certs
+        return certsArray
     }
 
     /// Top-level check: returns result
@@ -129,7 +100,9 @@ public final class CertificatesManager {
         guard let first = items.first else {
             return .failure(CertificateError.identityExtractionFailed)
         }
-        let identity = first[kSecImportItemIdentity as String] as! SecIdentity
+        guard let identity = first[kSecImportItemIdentity as String] as? SecIdentity else {
+            return .failure(CertificateError.identityExtractionFailed)
+        }
 
         // 2) extract certificate from identity
         var certRef: SecCertificate?
