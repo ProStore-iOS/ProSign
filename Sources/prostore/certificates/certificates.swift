@@ -4,14 +4,7 @@
 import Foundation
 import Security
 import CryptoKit
-
-#if canImport(CoreServices)
-import CoreServices
-#endif
-
-#if canImport(OpenSSL)
 import OpenSSL
-#endif
 
 public enum CertificateCheckResult {
     case incorrectPassword
@@ -59,36 +52,6 @@ public final class CertificatesManager {
     //  - If CoreServices/CMSDecoder APIs are available, use them (preferred).
     //  - Otherwise, if OpenSSL is available via SPM, parse with OpenSSL and convert X509 -> SecCertificate.
     private static func certificatesFromMobileProvision(_ data: Data) throws -> [SecCertificate] {
-        // --- Option A: Use CMSDecoder if available in this SDK ---
-        #if canImport(CoreServices)
-        var decoder: CMSDecoder? = nil
-        var status = CMSDecoderCreate(&decoder)
-        guard status == errSecSuccess, let dec = decoder else {
-            throw CertificateError.cmsDecodeFailed(status)
-        }
-
-        let updateStatus: OSStatus = data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) -> OSStatus in
-            guard let base = ptr.baseAddress else { return errSecParam }
-            return CMSDecoderUpdateMessage(dec, base, data.count)
-        }
-        guard updateStatus == errSecSuccess else {
-            throw CertificateError.cmsDecodeFailed(updateStatus)
-        }
-
-        status = CMSDecoderFinalizeMessage(dec)
-        guard status == errSecSuccess else {
-            throw CertificateError.cmsDecodeFailed(status)
-        }
-
-        var certsCF: CFArray? = nil
-        status = CMSDecoderCopyAllCerts(dec, &certsCF)
-        guard status == errSecSuccess, let certs = certsCF as? [SecCertificate], certs.count > 0 else {
-            throw CertificateError.noCertsInProvision
-        }
-        return certs
-        #else
-        // --- Option B: Use OpenSSL fallback if available ---
-        #if canImport(OpenSSL)
         // We'll parse PKCS#7 (DER) from the mobileprovision using OpenSSL functions.
         // Steps:
         //  - create BIO from memory
@@ -141,11 +104,6 @@ public final class CertificatesManager {
         sk_X509_pop_free(signers, X509_free)
         guard certs.count > 0 else { throw CertificateError.noCertsInProvision }
         return certs
-        #else
-        // Neither CMSDecoder nor OpenSSL available — not supported
-        throw CertificateError.unsupportedPlatform
-        #endif
-        #endif
     }
 
     /// Top-level check: returns result
