@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.1.8",
+          "date": "2025-09-15T08:16:24+0000",
+          "localizedDescription": "What's new in Version 1.1.8?\n- Move UIComponents to UIComponents.swift\n- Remove CMSDecoder dependency as it is failing us\n- Refactor signing logic into SigningManager with modular file operations\n- Update to v1.1.8",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.1.8/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3483808,
+          "sha256": "4e3a0ba651795ce3dd00517c1abed588fc152494b9d1180f8ed29226527cd94b",
+          "minOSVersion": "15.0",
+          "fullDate": "20250915081624"
+        },
+        {
           "version": "1.1.7",
           "date": "2025-09-15T07:45:00+0000",
           "localizedDescription": "What's new in Version 1.1.7?\n- Remove CMSDecoder dependency as it is failing us\n- Fix OpenSSL stack pointer handling and CFError -> NSError casting in certificates.swift\n- Update to v1.1.6\n- Update workflow so it doesn't build xcodegen from source every time\n- Add OpenSSL as a package\n- Attempt to fix duplicate package bug\n- Update to v1.1.7\n- Bug fixes\n- Another attempt to fix a pesky bug\n- Add HEADER_SEARCH_PATHS\n- Remove openSSL and only use Apple APIs",
