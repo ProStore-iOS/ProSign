@@ -112,7 +112,7 @@ jobs:
         uses: actions/cache@v3
         id: swift-packages
         with:
-          path: ${{ github.workspace }}/DerivedData/ProStore/SourcePackages
+          path: DerivedData/SourcePackages
           key: swift-packages-${{ runner.os }}-${{ hashFiles('project.yml') }}
           restore-keys: |
             swift-packages-${{ runner.os }}-
