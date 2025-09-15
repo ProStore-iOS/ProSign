@@ -4,7 +4,6 @@
 import Foundation
 import Security
 import CryptoKit
-import OpenSSL
 
 public enum CertificateCheckResult {
     case incorrectPassword
@@ -37,8 +36,8 @@ public final class CertificatesManager {
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                // Fixed: Force cast CFError to NSError
-                let nsError = cfError as! NSError
+                // Fixed: Remove force casting CFError to NSError
+                let nsError = cfError as NSError
                 throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
