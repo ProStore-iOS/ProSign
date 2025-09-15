@@ -1,4 +1,12 @@
-#include <openssl/x509.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/crypto.h>
+#import <openssl/x509.h>
+#import <openssl/pem.h>
+#import <openssl/pkcs7.h>
+#import <openssl/bio.h>
+#import <openssl/evp.h>
+#import <openssl/objects.h>
+#import <openssl/err.h>
+#import <openssl/ssl.h>
+#import <openssl/stack.h>
+#import <openssl/crypto.h>
+#import <openssl/asn1.h>
+#import <openssl/ossl_typ.h>
