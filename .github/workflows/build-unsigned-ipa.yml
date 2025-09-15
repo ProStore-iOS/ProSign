@@ -35,7 +35,7 @@ jobs:
           echo "=== sw_vers ==="
           sw_vers || true
 
-      - name: Ensure jq, yq & gh exist (best-effort — tries brew, then gh installer)
+      - name: Ensure jq, yq, gh & xcodegen exist (best-effort — tries brew, then gh installer)
         run: |
           # jq
           if ! command -v jq >/dev/null 2>&1; then
@@ -61,6 +61,14 @@ jobs:
             fi
           fi
 
+          # xcodegen
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            echo "xcodegen not found — attempting to install via brew"
+            if command -v brew >/dev/null 2>&1; then
+              brew install xcodegen || true
+            fi
+          fi
+
           # Fallback: official gh installer script (works across platforms)
           if ! command -v gh >/dev/null 2>&1; then
             echo "gh still not found — attempting official installer script"
@@ -71,6 +79,7 @@ jobs:
           echo "jq: $(jq --version 2>/dev/null || echo 'not installed')"
           echo "yq: $(yq --version 2>/dev/null || echo 'not installed')"
           echo "gh: $(gh --version 2>/dev/null || echo 'not installed')"
+          echo "xcodegen: $(xcodegen --version 2>/dev/null || echo 'not installed')"
         shell: bash
 
       - name: Ensure project.yml and sources exist (debug)
@@ -80,20 +89,10 @@ jobs:
           echo "project.yml (first 200 lines):"
           sed -n '1,200p' project.yml || true
 
-      - name: Build xcodegen from source (install to $HOME/.local/bin)
-        run: |
-          set -e
-          git clone --depth 1 https://github.com/yonaskolb/XcodeGen.git /tmp/XcodeGen
-          cd /tmp/XcodeGen
-          swift build -c release
-          mkdir -p $HOME/.local/bin
-          cp .build/release/xcodegen $HOME/.local/bin/xcodegen
-          echo "Installed xcodegen to $HOME/.local/bin"
-
       - name: Generate Xcode project with xcodegen
         run: |
           set -e
-          $HOME/.local/bin/xcodegen generate --spec project.yml
+          xcodegen generate --spec project.yml
           echo "Generated project at: $(pwd)/prostore.xcodeproj"
           echo "project.pbxproj header (first 60 lines):"
           sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
