@@ -37,9 +37,9 @@ public final class CertificatesManager {
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                // Safely cast CFError -> NSError if possible, otherwise fallback to -1
-                let nsError = cfError as? NSError
-                throw CertificateError.publicKeyExportFailed(OSStatus(nsError?.code ?? -1))
+                // Bridge CFError -> NSError safely and extract code (fallback -1)
+                let nsError = cfError as NSError
+                throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
             }
@@ -68,19 +68,20 @@ public final class CertificatesManager {
         }
         defer { PKCS7_free(p7) }
 
-        // Get signers (stack of X509). PKCS7_get0_signers often returns a newly allocated stack pointer.
+        // Get signers (stack of X509). PKCS7_get0_signers often returns an allocated stack pointer.
         guard let signers = PKCS7_get0_signers(p7, nil, 0) else {
             throw CertificateError.noCertsInProvision
         }
 
-        // Use OPENSSL_sk_* helpers (macros may be unavailable)
-        let rawStackPtr = UnsafeMutableRawPointer(signers)
-        let count = Int(OPENSSL_sk_num(rawStackPtr))
+        // Cast the returned stack pointer to OpaquePointer for OPENSSL_sk_* calls
+        let stackPtr = OpaquePointer(signers)
+
+        // Use OPENSSL_sk_num and OPENSSL_sk_value with proper index types
+        let count = Int(OPENSSL_sk_num(stackPtr))
         for i in 0..<count {
-            // OPENSSL_sk_value returns UnsafeMutableRawPointer?
-            guard let val = OPENSSL_sk_value(rawStackPtr, i) else { continue }
-            // Interpret the pointer as X509*
-            let x509Ptr = val.assumingMemoryBound(to: X509.self)
+            guard let rawVal = OPENSSL_sk_value(stackPtr, Int32(i)) else { continue }
+            // rawVal is UnsafeMutableRawPointer; interpret as X509*
+            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)
 
             // convert X509 -> DER
             var derPtr: UnsafeMutablePointer<UInt8>? = nil
@@ -100,8 +101,10 @@ public final class CertificatesManager {
             }
         }
 
-        // free the signers stack
-        OPENSSL_sk_pop_free(rawStackPtr, X509_free)
+        // free the signers stack using OPENSSL_sk_pop_free and provide X509_free as the free func.
+        // Need to cast X509_free to the expected C function pointer type.
+        let freeFunc = unsafeBitCast(X509_free, to: (@convention(c) (UnsafeMutableRawPointer?) -> Void).self)
+        OPENSSL_sk_pop_free(stackPtr, freeFunc)
 
         guard certs.count > 0 else { throw CertificateError.noCertsInProvision }
         return certs
