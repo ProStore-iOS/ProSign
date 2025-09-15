@@ -29,6 +29,8 @@ targets:
       IPHONEOS_DEPLOYMENT_TARGET: "15.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
       SWIFT_OBJC_BRIDGING_HEADER: "Sources/prostore/ProStore-Bridging-Header.h"
+      HEADER_SEARCH_PATHS:
+        - "$(SRCROOT)/Carthage/Checkouts/OpenSSL/include/**"
     info:
       path: "Info.plist"
       properties:
