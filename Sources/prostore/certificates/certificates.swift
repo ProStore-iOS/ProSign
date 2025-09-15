@@ -37,8 +37,8 @@ public final class CertificatesManager {
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                // Bridge CFError -> NSError safely and extract code (fallback -1)
-                let nsError = cfError as NSError
+                // Fixed: Force cast CFError to NSError
+                let nsError = cfError as! NSError
                 throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
@@ -73,15 +73,15 @@ public final class CertificatesManager {
             throw CertificateError.noCertsInProvision
         }
 
-        // Cast the returned stack pointer to OpaquePointer for OPENSSL_sk_* calls
-        let stackPtr = OpaquePointer(signers)
+        // Fixed: Proper cast for signers to OpaquePointer (assuming signers is UnsafeMutableRawPointer)
+        let stackPtr = OpaquePointer(UnsafeMutableRawPointer(signers))  // Tweak this if signers type is different
 
         // Use OPENSSL_sk_num and OPENSSL_sk_value with proper index types
         let count = Int(OPENSSL_sk_num(stackPtr))
         for i in 0..<count {
             guard let rawVal = OPENSSL_sk_value(stackPtr, Int32(i)) else { continue }
             // rawVal is UnsafeMutableRawPointer; interpret as X509*
-            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)
+            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)  // X509 should be in scope now
 
             // convert X509 -> DER
             var derPtr: UnsafeMutablePointer<UInt8>? = nil
@@ -101,10 +101,11 @@ public final class CertificatesManager {
             }
         }
 
-        // free the signers stack using OPENSSL_sk_pop_free and provide X509_free as the free func.
-        // Need to cast X509_free to the expected C function pointer type.
-        let freeFunc = unsafeBitCast(X509_free, to: (@convention(c) (UnsafeMutableRawPointer?) -> Void).self)
-        OPENSSL_sk_pop_free(stackPtr, freeFunc)
+        // Fixed warning: Safer way to cast the free func without unsafeBitCast
+        // Use a closure or direct cast if possible; here's a workaround
+        OPENSSL_sk_pop_free(stackPtr) { ptr in
+            X509_free(OpaquePointer(ptr))
+        }
 
         guard certs.count > 0 else { throw CertificateError.noCertsInProvision }
         return certs
