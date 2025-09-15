@@ -1,4 +1,4 @@
-// certificates/certificates.swift
+// Sources/prostore/certificates/certificates.swift
 // Put this file under Sources/prostore/certificates/
 
 import Foundation
@@ -16,7 +16,6 @@ public enum CertificateError: Error {
     case p12ImportFailed(OSStatus)
     case identityExtractionFailed
     case certExtractionFailed
-    case cmsDecodeFailed(OSStatus)
     case noCertsInProvision
     case publicKeyExportFailed(OSStatus)
     case unsupportedPlatform
@@ -37,9 +36,10 @@ public final class CertificatesManager {
         }
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
-            if let err = cfErr?.takeRetainedValue() {
-                // fixed: cast to OSStatus correctly
-                throw CertificateError.publicKeyExportFailed(OSStatus((err as NSError).code))
+            if let cfError = cfErr?.takeRetainedValue() {
+                // Safely cast CFError -> NSError if possible, otherwise fallback to -1
+                let nsError = cfError as? NSError
+                throw CertificateError.publicKeyExportFailed(OSStatus(nsError?.code ?? -1))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
             }
@@ -47,17 +47,9 @@ public final class CertificatesManager {
         return keyData
     }
 
-    // Try to extract SecCertificate objects from a .mobileprovision Data blob.
-    // Strategy:
-    //  - If CoreServices/CMSDecoder APIs are available, use them (preferred).
-    //  - Otherwise, if OpenSSL is available via SPM, parse with OpenSSL and convert X509 -> SecCertificate.
+    // Parse PKCS#7 (DER) from the mobileprovision using OpenSSL functions,
+    // convert X509 -> DER -> SecCertificate
     private static func certificatesFromMobileProvision(_ data: Data) throws -> [SecCertificate] {
-        // We'll parse PKCS#7 (DER) from the mobileprovision using OpenSSL functions.
-        // Steps:
-        //  - create BIO from memory
-        //  - d2i_PKCS7_bio to parse
-        //  - PKCS7_get0_signers to get stack of X509
-        //  - convert each X509 to DER (i2d_X509) and then to SecCertificate
         var certs: [SecCertificate] = []
 
         // Create BIO from data
@@ -76,22 +68,29 @@ public final class CertificatesManager {
         }
         defer { PKCS7_free(p7) }
 
-        // Get signers (stack of X509). PKCS7_get0_signers often returns a newly allocated stack.
+        // Get signers (stack of X509). PKCS7_get0_signers often returns a newly allocated stack pointer.
         guard let signers = PKCS7_get0_signers(p7, nil, 0) else {
             throw CertificateError.noCertsInProvision
         }
-        // iterate
-        let count = Int(sk_X509_num(signers))
+
+        // Use OPENSSL_sk_* helpers (macros may be unavailable)
+        let rawStackPtr = UnsafeMutableRawPointer(signers)
+        let count = Int(OPENSSL_sk_num(rawStackPtr))
         for i in 0..<count {
-            guard let x509 = sk_X509_value(signers, i) else { continue }
+            // OPENSSL_sk_value returns UnsafeMutableRawPointer?
+            guard let val = OPENSSL_sk_value(rawStackPtr, i) else { continue }
+            // Interpret the pointer as X509*
+            let x509Ptr = val.assumingMemoryBound(to: X509.self)
+
             // convert X509 -> DER
             var derPtr: UnsafeMutablePointer<UInt8>? = nil
-            let derLen = i2d_X509(x509, &derPtr)
+            let derLen = i2d_X509(x509Ptr, &derPtr)
             guard derLen > 0, let dptr = derPtr else { continue }
             // wrap into Data
             let derData = Data(bytes: dptr, count: Int(derLen))
             // free OpenSSL buffer produced by i2d_X509
             OPENSSL_free(dptr)
+
             // create SecCertificate from DER
             if let secCert = SecCertificateCreateWithData(nil, derData as CFData) {
                 certs.append(secCert)
@@ -100,8 +99,10 @@ public final class CertificatesManager {
                 continue
             }
         }
+
         // free the signers stack
-        sk_X509_pop_free(signers, X509_free)
+        OPENSSL_sk_pop_free(rawStackPtr, X509_free)
+
         guard certs.count > 0 else { throw CertificateError.noCertsInProvision }
         return certs
     }
@@ -125,12 +126,11 @@ public final class CertificatesManager {
             return .failure(CertificateError.p12ImportFailed(importStatus))
         }
 
-        // The import result contains kSecImportItemIdentity. It's safe to downcast to SecIdentity,
-        // but we'll be cautious and fail if not present.
-        guard let first = items.first,
-              let identity = first[kSecImportItemIdentity as String] as? SecIdentity else {
+        // Force-cast to SecIdentity (import guarantees this key exists for valid PKCS12)
+        guard let first = items.first else {
             return .failure(CertificateError.identityExtractionFailed)
         }
+        let identity = first[kSecImportItemIdentity as String] as! SecIdentity
 
         // 2) extract certificate from identity
         var certRef: SecCertificate?
