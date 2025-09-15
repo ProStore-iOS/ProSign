@@ -22,6 +22,15 @@ struct MainTabView: View {
             }
 
             NavigationView {
+                CertificateView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+            .tabItem {
+                Image(systemName: "key")
+                Text("Certificates")
+            }
+
+            NavigationView {
                 AboutView()
             }
             .navigationViewStyle(StackNavigationViewStyle())
