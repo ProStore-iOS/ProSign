@@ -1,6 +1,3 @@
-// Sources/prostore/certificates/certificates.swift
-// Put this file under Sources/prostore/certificates/
-
 import Foundation
 import Security
 import CryptoKit
@@ -36,8 +33,8 @@ public final class CertificatesManager {
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                // Fixed: Remove force casting CFError to NSError
-                let nsError = cfError as NSError
+                // Fixed: Force cast CFError to NSError
+                let nsError = cfError as! NSError
                 throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
@@ -73,14 +70,14 @@ public final class CertificatesManager {
         }
 
         // Fixed: Proper cast for signers to OpaquePointer (assuming signers is UnsafeMutableRawPointer)
-        let stackPtr = OpaquePointer(UnsafeMutableRawPointer(signers))  // Tweak this if signers type is different
+        let stackPtr = OpaquePointer(UnsafeMutableRawPointer(signers))
 
         // Use OPENSSL_sk_num and OPENSSL_sk_value with proper index types
         let count = Int(OPENSSL_sk_num(stackPtr))
         for i in 0..<count {
             guard let rawVal = OPENSSL_sk_value(stackPtr, Int32(i)) else { continue }
             // rawVal is UnsafeMutableRawPointer; interpret as X509*
-            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)  // X509 should be in scope now
+            let x509Ptr = rawVal.assumingMemoryBound(to: X509.self)
 
             // convert X509 -> DER
             var derPtr: UnsafeMutablePointer<UInt8>? = nil
@@ -101,7 +98,6 @@ public final class CertificatesManager {
         }
 
         // Fixed warning: Safer way to cast the free func without unsafeBitCast
-        // Use a closure or direct cast if possible; here's a workaround
         OPENSSL_sk_pop_free(stackPtr) { ptr in
             X509_free(OpaquePointer(ptr))
         }
