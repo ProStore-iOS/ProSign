@@ -35,7 +35,7 @@ jobs:
           echo "=== sw_vers ==="
           sw_vers || true
 
-      - name: Ensure jq, yq, gh & xcodegen exist (best-effort — tries brew, then gh installer)
+      - name: Install jq, yq, gh & xcodegen
         run: |
           # jq
           if ! command -v jq >/dev/null 2>&1; then
