@@ -9,7 +9,7 @@ struct CertificateView: View {
     @State private var prov = FileItem()
     @State private var p12Password = ""
     @State private var isProcessing = false
-    @State private var statusMessage = "" // will hold exactly one of: "Incorrect Password", "P12 and MOBILEPROVISION do not match", "Success!"
+    @State private var statusMessage = "" // will hold exactly one of: "Incorrect Password", "P12 and Mobileprovison do not match", "Success!"
     @State private var showPickerFor: PickerKind? = nil
 
     var body: some View {
@@ -24,7 +24,7 @@ struct CertificateView: View {
                     }
                 }
                 HStack {
-                    Text("MobileProvision:")
+                    Text("Mobileprovison:")
                     Spacer()
                     Text(prov.name.isEmpty ? "" : prov.name).foregroundColor(.secondary)
                     Button("Pick") {
@@ -63,7 +63,7 @@ struct CertificateView: View {
 
     private func checkStatus() {
         guard let p12URL = p12.url, let provURL = prov.url else {
-            statusMessage = "P12 and MOBILEPROVISION do not match"
+            statusMessage = "P12 and Mobileprovison do not match"
             return
         }
 
@@ -75,7 +75,7 @@ struct CertificateView: View {
                 let p12Data = try Data(contentsOf: p12URL)
                 let provData = try Data(contentsOf: provURL)
 
-                let result = CertificatesManager.check(p12Data: p12Data, password: p12Password, mobileProvisionData: provData)
+                let result = CertificatesManager.check(p12Data: p12Data, password: p12Password, MobileprovisonData: provData)
 
                 DispatchQueue.main.async {
                     isProcessing = false
@@ -83,14 +83,14 @@ struct CertificateView: View {
                     case .success(.incorrectPassword):
                         statusMessage = "Incorrect Password" // EXACT text requested
                     case .success(.noMatch):
-                        statusMessage = "P12 and MOBILEPROVISION do not match" // EXACT text requested
+                        statusMessage = "P12 and Mobileprovison do not match" // EXACT text requested
                     case .success(.success):
                         statusMessage = "Success!" // EXACT text requested
                     case .failure(let err):
                         // If there was an unexpected error, surface a no-match (safe) or show error (dev)
                         // We'll show no-match so user gets one of the three expected messages; but log the error.
                         print("Certificates check failed: \(err)")
-                        statusMessage = "P12 and MOBILEPROVISION do not match"
+                        statusMessage = "P12 and Mobileprovison do not match"
                     }
                 }
             } catch {
@@ -98,7 +98,7 @@ struct CertificateView: View {
                     isProcessing = false
                     // If the password is wrong we already catch that above. Reading files failed -> show no-match
                     print("File read error: \(error)")
-                    statusMessage = "P12 and MOBILEPROVISION do not match"
+                    statusMessage = "P12 and Mobileprovison do not match"
                 }
             }
         }
