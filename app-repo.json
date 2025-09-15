@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.2.1",
+          "date": "2025-09-15T08:51:27+0000",
+          "localizedDescription": "What's new in Version 1.2.1?\n- Update to v1.2.1\n- Add caching Swift Packages\n- Bug fix\n- Another bug fix",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.2.1/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3500402,
+          "sha256": "b1e11dd5ddda0210ba272429da554b1fa8367ea40cfab086a9d77986659b94e2",
+          "minOSVersion": "15.0",
+          "fullDate": "20250915085127"
+        },
+        {
           "version": "1.2.0",
           "date": "2025-09-15T08:38:41+0000",
           "localizedDescription": "What's new in Version 1.2.0?\n- Update to v1.2.0\n- Replace MobileprovisonData with mobileProvisionData\n- UI improvements",
