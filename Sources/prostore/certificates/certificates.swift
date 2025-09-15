@@ -14,7 +14,8 @@ public enum CertificateError: Error {
     case certExtractionFailed
     case noCertsInProvision
     case publicKeyExportFailed(OSStatus)
-    case unsupportedPlatform
+    case plistExtractionFailed
+    case unknown
 }
 
 public final class CertificatesManager {
@@ -33,8 +34,9 @@ public final class CertificatesManager {
         var cfErr: Unmanaged<CFError>?
         guard let keyData = SecKeyCopyExternalRepresentation(secKey, &cfErr) as Data? else {
             if let cfError = cfErr?.takeRetainedValue() {
-                let nsError = cfError as NSError
-                throw CertificateError.publicKeyExportFailed(OSStatus(nsError.code))
+                // get numeric code from CFError safely
+                let code = CFErrorGetCode(cfError)
+                throw CertificateError.publicKeyExportFailed(OSStatus(code))
             } else {
                 throw CertificateError.publicKeyExportFailed(-1)
             }
@@ -42,39 +44,54 @@ public final class CertificatesManager {
         return keyData
     }
 
-    // Parse PKCS#7 (DER) from the mobileprovision using Security's CMSDecoder,
-    // convert to SecCertificate array (no OpenSSL required)
+    // Extract the <plist>...</plist> portion from a .mobileprovision (PKCS7) blob,
+    // parse it to a dictionary and return SecCertificate objects from DeveloperCertificates.
     private static func certificatesFromMobileProvision(_ data: Data) throws -> [SecCertificate] {
-        // Create decoder
-        var decoderOptional: CMSDecoder?
-        var status = CMSDecoderCreate(&decoderOptional)
-        guard status == errSecSuccess, let decoder = decoderOptional else {
-            throw CertificateError.certExtractionFailed
+        // Find XML plist bounds inside the blob
+        let startTag = Data("<plist".utf8)
+        let endTag = Data("</plist>".utf8)
+
+        guard let startRange = data.range(of: startTag),
+              let endRange = data.range(of: endTag) else {
+            throw CertificateError.plistExtractionFailed
         }
 
-        // Feed data into decoder
-        let updateStatus: OSStatus = data.withUnsafeBytes { (rawPtr: UnsafeRawBufferPointer) in
-            guard let base = rawPtr.baseAddress else { return errSecParam }
-            return CMSDecoderUpdateMessage(decoder, base.assumingMemoryBound(to: UInt8.self), data.count)
-        }
-        guard updateStatus == errSecSuccess else {
-            throw CertificateError.certExtractionFailed
+        // endRange.upperBound is index after </plist>
+        let plistData = data[startRange.lowerBound..<endRange.upperBound]
+
+        // Parse plist
+        let parsed = try PropertyListSerialization.propertyList(from: Data(plistData), options: [], format: nil)
+        guard let dict = parsed as? [String: Any] else {
+            throw CertificateError.plistExtractionFailed
         }
 
-        // Finalize
-        status = CMSDecoderFinalizeMessage(decoder)
-        guard status == errSecSuccess else {
-            throw CertificateError.certExtractionFailed
+        // Typical key with embedded certs in provisioning profiles:
+        // "DeveloperCertificates" -> [Data] (DER blobs)
+        var resultCerts: [SecCertificate] = []
+
+        if let devArray = dict["DeveloperCertificates"] as? [Any] {
+            for item in devArray {
+                if let certData = item as? Data {
+                    if let secCert = SecCertificateCreateWithData(nil, certData as CFData) {
+                        resultCerts.append(secCert)
+                    }
+                } else if let base64String = item as? String,
+                          let certData = Data(base64Encoded: base64String) {
+                    if let secCert = SecCertificateCreateWithData(nil, certData as CFData) {
+                        resultCerts.append(secCert)
+                    }
+                } else {
+                    // ignore unknown item types
+                    continue
+                }
+            }
         }
 
-        // Extract all certificates
-        var certsCF: CFArray?
-        status = CMSDecoderCopyAllCerts(decoder, &certsCF)
-        guard status == errSecSuccess, let certsArray = certsCF as? [SecCertificate], !certsArray.isEmpty else {
+        if resultCerts.isEmpty {
             throw CertificateError.noCertsInProvision
         }
 
-        return certsArray
+        return resultCerts
     }
 
     /// Top-level check: returns result
@@ -96,13 +113,12 @@ public final class CertificatesManager {
             return .failure(CertificateError.p12ImportFailed(importStatus))
         }
 
-        // Force-cast to SecIdentity (import guarantees this key exists for valid PKCS12)
+        // Grab identity (force-cast is safe because import succeeded and the dictionary contains the identity)
         guard let first = items.first else {
             return .failure(CertificateError.identityExtractionFailed)
         }
-        guard let identity = first[kSecImportItemIdentity as String] as? SecIdentity else {
-            return .failure(CertificateError.identityExtractionFailed)
-        }
+        // use force-cast to avoid "conditional downcast ... will always succeed" warnings
+        let identity = first[kSecImportItemIdentity as String] as! SecIdentity
 
         // 2) extract certificate from identity
         var certRef: SecCertificate?
@@ -116,7 +132,7 @@ public final class CertificatesManager {
             let p12PubKeyData = try publicKeyData(from: p12Cert)
             let p12Hash = sha256Hex(p12PubKeyData)
 
-            // 4) parse mobileprovision and check embedded certs
+            // 4) parse mobileprovision and check embedded certs (no OpenSSL)
             let embeddedCerts = try certificatesFromMobileProvision(mobileProvisionData)
 
             for cert in embeddedCerts {
