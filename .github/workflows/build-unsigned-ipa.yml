@@ -90,7 +90,7 @@ jobs:
           echo "project.yml (first 200 lines):"
           sed -n '1,200p' project.yml || true
 
-      - name: Generate Xcode Project
+      - name: Generate Xcode Project (robust + diagnostics)
         shell: /bin/bash {0}
         run: |
           set -euo pipefail
@@ -113,9 +113,9 @@ jobs:
             fi
           fi
 
-          echo "=== running xcodegen generate --spec project.yml --verbose ==="
+          echo "=== running xcodegen generate --spec project.yml ==="
           set +e
-          xcodegen generate --spec project.yml --verbose
+          xcodegen generate --spec project.yml
           rc=$?
           set -e
 
@@ -123,9 +123,10 @@ jobs:
             echo "❌ xcodegen exited with code $rc — collecting diagnostics..."
 
             echo "---- macOS unified log for xcodegen (last 5m) ----"
-            log show --style syslog --predicate 'process == \"xcodegen\"' --last 5m || true
+            # safer predicate: search event messages for xcodegen (best-effort)
+            log show --style syslog --predicate 'eventMessage CONTAINS "xcodegen"' --last 5m || true
 
-            echo "---- Recent DiagnosticReports ----"
+            echo "---- Recent DiagnosticReports (possible crash logs) ----"
             ls -la ~/Library/Logs/DiagnosticReports | tail -n 20 || true
 
             echo "---- /var/log/system.log (tail) ----"
@@ -135,9 +136,9 @@ jobs:
               echo "Attempting: brew reinstall xcodegen (then retry once)..."
               brew reinstall xcodegen || brew install xcodegen || true
 
-              echo "Retrying xcodegen generate --spec project.yml --verbose (one retry)..."
+              echo "Retrying xcodegen generate --spec project.yml (one retry)..."
               set +e
-              xcodegen generate --spec project.yml --verbose
+              xcodegen generate --spec project.yml
               retry_rc=$?
               set -e
 
@@ -153,13 +154,17 @@ jobs:
 
             echo ""
             echo "Possible causes:"
-            echo "- xcodegen binary is crashing due to incompatible architecture (ARM vs x86_64)."
-            echo "- Corrupt xcodegen install or an OS-level incompatibility."
+            echo "- xcodegen invocation failed due to invalid flag or spec syntax (we removed the bad flag)."
+            echo "- Architecture mismatch (xcodegen is ARM vs expecting x86_64) — unlikely now since binary is arm64."
+            echo "- Corrupt install or runner environment oddness."
             echo ""
-            echo "Quick diagnostics to check in the logs above:"
-            echo "  file $(which xcodegen)                  # check binary arch"
+            echo "Quick checks you can find in the logs above:"
+            echo "  file $(which xcodegen)                  # binary arch"
             echo "  xcodegen --version"
-            echo "  arch -x86_64 xcodegen generate --spec project.yml   # try forcing x86_64 (if Rosetta available)"
+            echo ""
+            echo "If you still hit issues, try:"
+            echo "  - Forcing x86_64: arch -x86_64 xcodegen generate --spec project.yml   (only if Rosetta is available)"
+            echo "  - Switching runner image: runs-on: macos-latest (or macos-12)"
             echo ""
             exit $rc
           fi
