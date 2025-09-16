@@ -5,6 +5,7 @@ options:
 
 configs:
   Release: release
+  Debug: debug
 
 packages:
   ZsignPackage:
