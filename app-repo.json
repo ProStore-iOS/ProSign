@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.3.2",
+          "date": "2025-09-16T07:18:57+0000",
+          "localizedDescription": "What's new in Version 1.3.2?\n- Update project.yml for versioning and optimization\n- Refactor Xcode project generation step",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.3.2/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3494703,
+          "sha256": "8c34658c9b088c6883b542b2a82a8facd872052d7350ac25c6822e33b5b7f0f1",
+          "minOSVersion": "16.0",
+          "fullDate": "20250916071857"
+        },
+        {
           "version": "1.3.1",
           "date": "2025-09-15T22:25:48+0000",
           "localizedDescription": "What's new in Version 1.3.1?\n- Revert AboutView's UI changes and fix some bugs",
