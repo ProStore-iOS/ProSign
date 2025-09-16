@@ -203,69 +203,11 @@ jobs:
           echo "Created device ipa: $OUTPUT_IPA"
           ls -la "$OUTPUT_IPA" || true
 
-      - name: Build Simulator IPA
-        run: |
-          set -e
-          echo "Starting simulator build (won't fail the entire job if it fails)."
-          SIM_DERIVED="$PWD/build/sim_derived"
-          rm -rf "$SIM_DERIVED"
-          set +e
-          xcodebuild clean build \
-            -project prostore.xcodeproj \
-            -scheme prostore \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -derivedDataPath "$SIM_DERIVED" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
-          rc=$?
-          set -e
-          if [ $rc -ne 0 ]; then
-            echo "Warning: simulator build failed (exit $rc). Will attempt to recover packaging if a simulator .app exists."
-          fi
-
-          POSSIBLE_APPS=(
-            "$SIM_DERIVED/Build/Products/Release-iphonesimulator/prostore.app"
-            "$SIM_DERIVED/Build/Products/Debug-iphonesimulator/prostore.app"
-            "$PWD/build/Build/Products/Release-iphonesimulator/prostore.app"
-            "$PWD/build/Release-iphonesimulator/prostore.app"
-          )
-
-          FOUND_APP=""
-          for p in "${POSSIBLE_APPS[@]}"; do
-            if [ -d "$p" ]; then
-              FOUND_APP="$p"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND_APP" ]; then
-            echo "Simulator .app not found in expected locations. Listing $SIM_DERIVED contents for debug:"
-            ls -la "$SIM_DERIVED" || true
-            echo "Skipping simulator .ipa packaging."
-            exit 0
-          fi
-
-          echo "Found simulator .app at: $FOUND_APP"
-          SIM_IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
-          mkdir -p build/Payload-sim
-          rm -rf build/Payload-sim/* || true
-          cp -R "$FOUND_APP" build/Payload-sim/
-          (cd build && zip -r "$(basename "$SIM_IPA")" Payload-sim) || exit 1
-          echo "Created simulator ipa: $SIM_IPA"
-          ls -la "$SIM_IPA" || true
-
       - name: Upload Device IPA
         uses: actions/upload-artifact@v4
         with:
           name: com.prostoreios.prostore-unsigned-ios.ipa
           path: build/com.prostoreios.prostore-unsigned-ios.ipa
-
-      - name: Upload Simulator IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: com.prostoreios.prostore-unsigned-iossimulator.ipa
-          path: build/com.prostoreios.prostore-unsigned-iossimulator.ipa
-          if-no-files-found: ignore
 
       - name: Get App Version
         id: get_version
@@ -427,13 +369,6 @@ jobs:
           name: com.prostoreios.prostore-unsigned-ios.ipa
           path: build
 
-      - name: Download Simulator IPA
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: com.prostoreios.prostore-unsigned-iossimulator.ipa
-          path: build
-
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -444,13 +379,8 @@ jobs:
           echo "Creating release $TAG with notes:"
           printf '%s\n' "$CHANGELOG"
           DEVICE_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
-          SIM_IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
-          SIM_ARG=""
-          if [ -f "$SIM_IPA" ]; then
-            SIM_ARG="$SIM_IPA"
-          fi
           gh release create "$TAG" \
-            "$DEVICE_IPA" $SIM_ARG \
+            "$DEVICE_IPA" \
             --title "ProStore v$VERSION" \
             --notes "$CHANGELOG" \
             --repo "$GITHUB_REPOSITORY"
