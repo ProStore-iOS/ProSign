@@ -90,88 +90,100 @@ jobs:
           echo "project.yml (first 200 lines):"
           sed -n '1,200p' project.yml || true
 
-      - name: Generate Xcode Project (robust + diagnostics)
+      - name: Generate Xcode Project (force local build + override Homebrew bottle)
         shell: /bin/bash {0}
         run: |
           set -euo pipefail
 
-          echo "=== diagnostic: PATH and which xcodegen ==="
+          echo "=== diagnostics: PATH + which xcodegen ==="
           echo "PATH=$PATH"
           which xcodegen || true
-
+          xcodegen --version 2>/dev/null || true
           if command -v xcodegen >/dev/null 2>&1; then
-            echo "=== xcodegen --version ==="
-            xcodegen --version || true
-
-            echo "=== file info for xcodegen binary (arch info) ==="
+            echo "xcodegen binary:"
             file "$(command -v xcodegen)" || true
-          else
-            echo "xcodegen not found — attempting to install via brew"
-            if command -v brew >/dev/null 2>&1; then
-              brew update || true
-              brew install xcodegen || true
-            fi
+            spctl --assess -vv "$(command -v xcodegen)" 2>&1 || true
+            xattr -l "$(command -v xcodegen)" 2>/dev/null || true
           fi
 
-          echo "=== running xcodegen generate --spec project.yml ==="
+          echo "=== Attempt fast path: run preinstalled xcodegen ==="
           set +e
           xcodegen generate --spec project.yml
           rc=$?
           set -e
 
-          if [ $rc -ne 0 ]; then
-            echo "❌ xcodegen exited with code $rc — collecting diagnostics..."
-
-            echo "---- macOS unified log for xcodegen (last 5m) ----"
-            # safer predicate: search event messages for xcodegen (best-effort)
-            log show --style syslog --predicate 'eventMessage CONTAINS "xcodegen"' --last 5m || true
-
-            echo "---- Recent DiagnosticReports (possible crash logs) ----"
-            ls -la ~/Library/Logs/DiagnosticReports | tail -n 20 || true
-
-            echo "---- /var/log/system.log (tail) ----"
-            sudo tail -n 200 /var/log/system.log || true
-
-            if command -v brew >/dev/null 2>&1; then
-              echo "Attempting: brew reinstall xcodegen (then retry once)..."
-              brew reinstall xcodegen || brew install xcodegen || true
-
-              echo "Retrying xcodegen generate --spec project.yml (one retry)..."
-              set +e
-              xcodegen generate --spec project.yml
-              retry_rc=$?
-              set -e
-
-              if [ $retry_rc -eq 0 ]; then
-                echo "✅ xcodegen succeeded on retry."
-                echo "Generated project at: $(pwd)/prostore.xcodeproj"
-                sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
-                exit 0
-              else
-                echo "❌ Retry failed with exit code $retry_rc."
-              fi
-            fi
-
-            echo ""
-            echo "Possible causes:"
-            echo "- xcodegen invocation failed due to invalid flag or spec syntax (we removed the bad flag)."
-            echo "- Architecture mismatch (xcodegen is ARM vs expecting x86_64) — unlikely now since binary is arm64."
-            echo "- Corrupt install or runner environment oddness."
-            echo ""
-            echo "Quick checks you can find in the logs above:"
-            echo "  file $(which xcodegen)                  # binary arch"
-            echo "  xcodegen --version"
-            echo ""
-            echo "If you still hit issues, try:"
-            echo "  - Forcing x86_64: arch -x86_64 xcodegen generate --spec project.yml   (only if Rosetta is available)"
-            echo "  - Switching runner image: runs-on: macos-latest (or macos-12)"
-            echo ""
-            exit $rc
+          if [ $rc -eq 0 ]; then
+            echo "✅ Fast path succeeded (preinstalled xcodegen)."
+            sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
+            exit 0
           fi
 
-          echo "✅ Generated project at: $(pwd)/prostore.xcodeproj"
-          echo "project.pbxproj header (first 60 lines):"
-          sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
+          echo "⚠️ Fast path failed (rc=$rc). Checking for AMFI/CT issues..."
+
+          # show kernel/AMFI lines for quick signal
+          echo "---- recent AMFI / kernel messages (best-effort) ----"
+          log show --style syslog --last 5m 2>/dev/null | egrep -i "AMFI|CodeSigning|CT|xcodegen" || true
+
+          # If Homebrew xcodegen is present, aggressively remove it to avoid re-using the bottle
+          if command -v brew >/dev/null 2>&1 && command -v xcodegen >/dev/null 2>&1; then
+            echo "Removing Homebrew xcodegen (to avoid poisoned bottle)…"
+            brew uninstall --force xcodegen || true
+            brew cleanup -s xcodegen || true
+          fi
+
+          echo "Preparing to build XcodeGen from source (this bypasses bottle CT/AMFI issues)."
+          mkdir -p "$HOME/.local/bin"
+          TMPDIR=$(mktemp -d)
+          echo "Cloning XcodeGen into $TMPDIR..."
+          git clone --depth 1 https://github.com/yonaskolb/XcodeGen.git "$TMPDIR/XcodeGen" || { echo "git clone failed"; exit 20; }
+          cd "$TMPDIR/XcodeGen"
+
+          echo "Swift toolchain:"
+          swift --version || true
+
+          echo "Building xcodegen (swift build -c release)... this may take ~30-90s"
+          # build for the runner architecture
+          swift build -c release || { echo "swift build failed"; exit 21; }
+
+          BUILT_BIN="$(pwd)/.build/release/xcodegen"
+          if [ ! -f "$BUILT_BIN" ]; then
+            echo "ERROR: built binary not found at $BUILT_BIN"
+            ls -la ./.build || true
+            exit 22
+          fi
+
+          echo "Installing built xcodegen to \$HOME/.local/bin"
+          cp "$BUILT_BIN" "$HOME/.local/bin/xcodegen"
+          chmod +x "$HOME/.local/bin/xcodegen"
+          export PATH="$HOME/.local/bin:$PATH"
+
+          echo "Sanity check: which xcodegen -> $(which xcodegen)"
+          file "$(which xcodegen)" || true
+          spctl --assess -vv "$(which xcodegen)" 2>&1 || true
+          xattr -l "$(which xcodegen)" 2>/dev/null || true
+
+          echo "Running xcodegen generate --spec project.yml with local-built binary..."
+          set +e
+          xcodegen generate --spec project.yml
+          final_rc=$?
+          set -e
+
+          if [ $final_rc -eq 0 ]; then
+            echo "✅ Success: generated project using locally built xcodegen."
+            sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
+            exit 0
+          else
+            echo "❌ Failure even after building from source (rc=$final_rc). Dumping diagnostics:"
+            echo "spctl --assess output for built binary:"
+            spctl --assess -vv "$HOME/.local/bin/xcodegen" 2>&1 || true
+            echo "xattr for built binary:"
+            xattr -l "$HOME/.local/bin/xcodegen" 2>/dev/null || true
+            echo "ls -la $HOME/.local/bin:"
+            ls -la "$HOME/.local/bin" || true
+            echo "Recent log grep (AMFI/CodeSigning/xcodegen):"
+            log show --style syslog --last 10m 2>/dev/null | egrep -i "AMFI|CodeSigning|xcodegen" || true
+            exit $final_rc
+          fi
 
       - name: Resolve Swift Packages
         run: |
