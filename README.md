@@ -20,4 +20,5 @@ ProStore app source URL: https://prostore-ios.github.io/apps.json
 <img src="gallery/Screenshot1.png" width="550">&nbsp;
 <img src="gallery/Screenshot2.png" width="550">&nbsp;
 <img src="gallery/Screenshot3.png" width="550">&nbsp;
-<img src="gallery/Screenshot4.png" width="550">
+<img src="gallery/Screenshot4.png" width="550">&nbsp;
+<img src="gallery/Screenshot5.png" width="550">
