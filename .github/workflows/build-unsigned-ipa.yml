@@ -91,6 +91,7 @@ jobs:
           sed -n '1,200p' project.yml || true
 
       - name: Generate Xcode Project
+        shell: /bin/bash {0}
         run: |
           set -euo pipefail
 
@@ -113,7 +114,6 @@ jobs:
           fi
 
           echo "=== running xcodegen generate --spec project.yml --verbose ==="
-          # run xcodegen but capture non-zero rather than letting set -e kill the job immediately
           set +e
           xcodegen generate --spec project.yml --verbose
           rc=$?
@@ -123,10 +123,9 @@ jobs:
             echo "❌ xcodegen exited with code $rc — collecting diagnostics..."
 
             echo "---- macOS unified log for xcodegen (last 5m) ----"
-            # unified logging (may require permission on some runners) - best-effort
-            log show --style syslog --predicate 'process == "xcodegen"' --last 5m || true
+            log show --style syslog --predicate 'process == \"xcodegen\"' --last 5m || true
 
-            echo "---- Recent DiagnosticReports (may contain a crash log) ----"
+            echo "---- Recent DiagnosticReports ----"
             ls -la ~/Library/Logs/DiagnosticReports | tail -n 20 || true
 
             echo "---- /var/log/system.log (tail) ----"
@@ -157,24 +156,17 @@ jobs:
             echo "- xcodegen binary is crashing due to incompatible architecture (ARM vs x86_64)."
             echo "- Corrupt xcodegen install or an OS-level incompatibility."
             echo ""
-            echo "Quick diagnostics you can run locally:"
+            echo "Quick diagnostics to check in the logs above:"
             echo "  file $(which xcodegen)                  # check binary arch"
             echo "  xcodegen --version"
-            echo "  arch -x86_64 xcodegen generate --spec project.yml   # try forcing x86_64 (only if Rosetta is available)"
+            echo "  arch -x86_64 xcodegen generate --spec project.yml   # try forcing x86_64 (if Rosetta available)"
             echo ""
-            echo "If this persists on the GitHub-hosted runner, try one of:"
-            echo "- Force running xcodegen under Rosetta (arch -x86_64) if the binary is x86_64 and Rosetta is installed."
-            echo "- Use a different runner image (e.g. macos-latest / macos-12) that better matches the xcodegen build."
-            echo "- Rebuild xcodegen locally from source or use a known-good prebuilt binary."
-            echo ""
-            # fail the step with the original rc (keeps behaviour obvious)
             exit $rc
           fi
 
           echo "✅ Generated project at: $(pwd)/prostore.xcodeproj"
           echo "project.pbxproj header (first 60 lines):"
           sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
-        shell: /bin/bash
 
       - name: Resolve Swift Packages
         run: |
