@@ -48,13 +48,3 @@ targets:
         product: ZsignSwift
       - package: ZIPFoundation
         product: ZIPFoundation
-
-schemes:
-  ProStore-Release:
-    build:
-      targets:
-        prostore: all
-    run:
-      config: Release
-    archive:
-      config: Release
