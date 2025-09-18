@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.4.0",
+          "date": "2025-09-18T07:10:01+0000",
+          "localizedDescription": "What's new in Version 1.4.0?\n- Minor bug fixes\n- Delete gallery photos\n- Add files via upload\n- Rename Screenshot1\n- Add images to gallery in README\n- Update to use official loyahdev certificates for v1.4.0\n- Fix: Use display names for files (read-only name prop) + wrap deprecated Archive init in do-catch",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.4.0/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3538923,
+          "sha256": "49b2c34af82f6deb26f79ca4beb2a098a597198dce71d606b2144fa43ae740ab",
+          "minOSVersion": "16.0",
+          "fullDate": "20250918071001"
+        },
+        {
           "version": "1.3.2",
           "date": "2025-09-16T07:18:57+0000",
           "localizedDescription": "What's new in Version 1.3.2?\n- Update project.yml for versioning and optimization\n- Refactor Xcode project generation step",
