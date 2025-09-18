@@ -89,7 +89,7 @@ struct CertificateView: View {
                             .foregroundColor(.blue)
                         Text("P12")
                         Spacer()
-                        Text(p12Name.isEmpty ? "No file selected" : p12Name) // Use p12Name here
+                        Text(p12Name.isEmpty ? "No file selected" : p12Name)
                             .font(.caption)
                             .lineLimit(1)
                             .foregroundColor(.secondary)
@@ -109,7 +109,7 @@ struct CertificateView: View {
                             .foregroundColor(.blue)
                         Text("MobileProvision")
                         Spacer()
-                        Text(provName.isEmpty ? "No file selected" : provName) // Use provName here
+                        Text(provName.isEmpty ? "No file selected" : provName)
                             .font(.caption)
                             .lineLimit(1)
                             .foregroundColor(.secondary)
@@ -180,10 +180,12 @@ struct CertificateView: View {
                 switch kind {
                 case .p12:
                     p12.url = url
-                    p12Name = url.lastPathComponent // Set display name here instead
+                    p12Name = url.lastPathComponent
                 case .prov:
                     prov.url = url
-                    provName = url.lastPathComponent // Same for prov
+                    provName = url.lastPathComponent
+                case .ipa:
+                    break
                 }
             })
         }
