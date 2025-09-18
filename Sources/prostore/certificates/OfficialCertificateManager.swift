@@ -125,41 +125,107 @@ class OfficialCertificateManager: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
 
+            certs[index].status = "Downloading zip..."
+            currentStatus = certs[index].status
             let (zipData, _) = try await URLSession.shared.data(from: cert.downloadURL)
             let tempZipURL = tempDir.appendingPathComponent("cert.zip")
             try zipData.write(to: tempZipURL)
 
+            certs[index].status = "Unzipping..."
+            currentStatus = certs[index].status
             // Unzip using ZIPFoundation
             try FileManager.default.unzipItem(at: tempZipURL, to: tempDir)
 
-            // Find the extraction directory (root or single subdir)
-            let contents = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
-            var searchDir = tempDir
-            if contents.count == 1 {
-                let firstItem = contents[0]
+            // Recursively enumerate files and ignore any path that contains __MACOSX
+            var p12Urls: [URL] = []
+            var provUrls: [URL] = []
+            var txtUrls: [URL] = []
+
+            let enumerator = FileManager.default.enumerator(at: tempDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles], errorHandler: nil)
+            while let item = enumerator?.nextObject() as? URL {
+                // skip anything in a __MACOSX folder
+                if item.pathComponents.contains("__MACOSX") { continue }
+                // only consider files
                 var isDir: ObjCBool = false
-                if FileManager.default.fileExists(atPath: firstItem.path, isDirectory: &isDir), isDir.boolValue {
-                    searchDir = firstItem
+                if FileManager.default.fileExists(atPath: item.path, isDirectory: &isDir), isDir.boolValue { continue }
+
+                let ext = item.pathExtension.lowercased()
+                if ext == "p12" {
+                    p12Urls.append(item)
+                } else if ext == "mobileprovision" {
+                    provUrls.append(item)
+                } else if ext == "txt" {
+                    txtUrls.append(item)
                 }
             }
 
-            let fileContents = try FileManager.default.contentsOfDirectory(at: searchDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
-            var p12URL: URL?
-            var provURL: URL?
-            var txtURL: URL?
-
-            for url in fileContents {
-                let ext = url.pathExtension.lowercased()
-                if ext == "p12" { p12URL = url }
-                else if ext == "mobileprovision" { provURL = url }
-                else if ext == "txt" { txtURL = url }
+            // Helper: extract the highest integer from a filename (returns nil if none)
+            func highestNumber(in string: String) -> Int? {
+                do {
+                    let regex = try NSRegularExpression(pattern: "\\d+", options: [])
+                    let ns = string as NSString
+                    let matches = regex.matches(in: string, options: [], range: NSRange(location: 0, length: ns.length))
+                    let ints = matches.compactMap { match -> Int? in
+                        let numStr = ns.substring(with: match.range)
+                        return Int(numStr)
+                    }
+                    return ints.max()
+                } catch {
+                    return nil
+                }
             }
 
-            guard let p12U = p12URL, let provU = provURL, let txtU = txtURL else {
+            // Choose mobile provision: if multiple, pick one with highest number in filename, otherwise random
+            var chosenProvURL: URL?
+            if provUrls.count == 1 {
+                chosenProvURL = provUrls.first
+            } else if provUrls.count > 1 {
+                // Map each URL to its highest number (if any)
+                var best: (url: URL, num: Int?)?
+                for u in provUrls {
+                    let name = u.lastPathComponent
+                    let num = highestNumber(in: name)
+                    if best == nil {
+                        best = (u, num)
+                    } else {
+                        switch (best!.num, num) {
+                        case (nil, nil):
+                            // keep current best (we'll pick random fallback below if none have numbers)
+                            break
+                        case (nil, .some):
+                            best = (u, num)
+                        case (.some(let a), .some(let b)):
+                            if b > a { best = (u, num) }
+                        case (.some, nil):
+                            break
+                        }
+                    }
+                }
+                if let bestNum = best?.num {
+                    // There was at least one with a number — pick the one with max number
+                    let maxNumber = bestNum
+                    if let pick = provUrls.first(where: { highestNumber(in: $0.lastPathComponent) == maxNumber }) {
+                        chosenProvURL = pick
+                    }
+                } else {
+                    // no numbers found in any filename — pick random
+                    chosenProvURL = provUrls.randomElement()
+                }
+            }
+
+            // Basic selection for p12 and txt: pick the first found (could be improved if you want)
+            let chosenP12URL = p12Urls.first
+            let chosenTxtURL = txtUrls.first
+
+            // Validate that we have required files
+            guard let p12U = chosenP12URL, let provU = chosenProvURL, let txtU = chosenTxtURL else {
                 certs[index].status = "Error: Missing p12, mobileprovision or txt"
                 currentStatus = certs[index].status
                 throw NSError(domain: "MissingFiles", code: 1, userInfo: [NSLocalizedDescriptionKey: "Zip missing p12, provision, or txt"])
             }
+
+            certs[index].status = "Reading files..."
+            currentStatus = certs[index].status
 
             let txtData = try Data(contentsOf: txtU)
             let password = String(data: txtData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -167,6 +233,8 @@ class OfficialCertificateManager: ObservableObject {
             let p12Data = try Data(contentsOf: p12U)
             let provData = try Data(contentsOf: provU)
 
+            certs[index].status = "Verifying certificate..."
+            currentStatus = certs[index].status
             let result = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
 
             switch result {
