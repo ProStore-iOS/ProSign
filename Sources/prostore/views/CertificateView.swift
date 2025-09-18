@@ -1,268 +1,249 @@
+// CertificateView.swift
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct CertificateView: View {
-    @StateObject private var officialManager = OfficialCertificateManager()
-    
-    @State private var p12 = FileItem()
-    @State private var prov = FileItem()
-    @State private var p12Name: String = ""
-    @State private var provName: String = ""
-    @State private var p12Password = ""
-    @State private var isProcessing = false
-    @State private var customStatusMessage = ""
-    @State private var showPickerFor: PickerKind? = nil
-    
-    @State private var showAllOfficial = false
+struct CustomCertificate: Identifiable {
+    let id = UUID()
+    let name: String
+    let p12Data: Data
+    let provData: Data
+    let password: String
+    var status: String = ""
+    var isProcessing: Bool = false
+}
 
+struct CertificateView: View {
+    @State private var customCertificates: [CustomCertificate] = []
+    @State private var showAddCertificateSheet = false
+    
     var body: some View {
         NavigationStack {
-            Form {
-                // Official Certificates Section
-                Section(header: Text("Official Certificates")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .padding(.top, 8)) {
-                    Text("Thanks to loyahdev!")
-                        .font(.subheadline)
-                        .italic()
-                        .foregroundColor(.secondary)
-                    
-                    if let featured = officialManager.featuredCert {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(featured.name)
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Text(featured.type.rawValue)
-                                .font(.caption)
-                                .foregroundColor(featured.type == .signed ? .green : .orange)
-                            Button(action: { Task { await officialManager.checkCert(featured) } }) {
-                                Text("Check This One")
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(officialManager.isProcessing ? Color.gray : Color.green.opacity(0.1))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
-                            }
-                            .disabled(officialManager.isProcessing)
-                            if officialManager.isProcessing {
-                                ProgressView("Checking...")
-                                    .scaleEffect(0.8)
-                            }
-                            Text(officialManager.currentStatus)
-                                .font(.caption)
-                                .foregroundColor(officialManager.currentStatus.contains("Success") ? .green : officialManager.currentStatus.isEmpty ? .primary : .red)
-                                .animation(.easeInOut(duration: 0.3), value: officialManager.currentStatus)
-                        }
-                        .padding(.vertical, 4)
-                    } else if !officialManager.certs.isEmpty {
-                        Text("No featured cert right now—check the full list!")
-                            .font(.caption)
+            List {
+                Section(header: Text("Custom Certificates")) {
+                    if customCertificates.isEmpty {
+                        Text("No certificates added yet")
                             .foregroundColor(.secondary)
                     } else {
-                        Text("No certificates found :(")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Button(action: { showAllOfficial = true }) {
-                        HStack {
-                            Spacer()
-                            Text("More Certificates")
-                                .font(.body)
-                                .foregroundColor(.blue)
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.blue)
-                            Spacer()
+                        ForEach($customCertificates) { $cert in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(cert.name)
+                                        .font(.headline)
+                                    if !cert.status.isEmpty {
+                                        Text(cert.status)
+                                            .font(.caption)
+                                            .foregroundColor(cert.status == "Success!" ? .green : .red)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                if cert.isProcessing {
+                                    ProgressView()
+                                } else {
+                                    Button("Check") {
+                                        checkCertificate(certificate: $cert)
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
-                
-                // Custom Certificate Section
-                Section(header: Text("Custom Certificate")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .padding(.top, 8)) {
-                    // P12 picker
-                    HStack {
-                        Image(systemName: "lock.doc.fill")
-                            .foregroundColor(.blue)
-                        Text("P12")
-                        Spacer()
-                        Text(p12Name.isEmpty ? "No file selected" : p12Name)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .foregroundColor(.secondary)
-                        Button(action: { showPickerFor = .p12 }) {
-                            Text("Pick")
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
-                        }
-                    }
-                    .padding(.vertical, 4)
-
-                    // MobileProvision picker
-                    HStack {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundColor(.blue)
-                        Text("MobileProvision")
-                        Spacer()
-                        Text(provName.isEmpty ? "No file selected" : provName)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .foregroundColor(.secondary)
-                        Button(action: { showPickerFor = .prov }) {
-                            Text("Pick")
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
-                        }
-                    }
-                    .padding(.vertical, 4)
-
-                    // Password field
-                    HStack {
-                        Image(systemName: "lock.fill")
-                            .foregroundColor(.blue)
-                        SecureField("P12 Password", text: $p12Password)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section {
-                    Button(action: checkCustomStatus) {
-                        HStack {
-                            Spacer()
-                            Text("Check Status")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(isProcessing || p12.url == nil || prov.url == nil ? Color.gray : Color.blue)
-                                .cornerRadius(10)
-                                .shadow(radius: 2)
-                            Spacer()
-                        }
-                    }
-                    .disabled(isProcessing || p12.url == nil || prov.url == nil)
-                    .scaleEffect(isProcessing ? 0.95 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: isProcessing)
-                }
-                .padding(.vertical, 8)
-
-                Section(header: Text("Custom Result")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .padding(.top, 8)) {
-                    HStack {
-                        if isProcessing {
-                            ProgressView()
-                                .padding(.trailing, 8)
-                        }
-                        Text(customStatusMessage)
-                            .foregroundColor(customStatusMessage == "Success!" ? .green : customStatusMessage.isEmpty ? .primary : .red)
-                            .animation(.easeIn, value: customStatusMessage)
                     }
                 }
             }
             .navigationTitle("Certificate App")
             .navigationBarTitleDisplayMode(.inline)
-            .accentColor(.blue)
-            .task {
-                await officialManager.loadCerts()
-            }
-        }
-        .sheet(item: $showPickerFor, onDismiss: nil) { kind in
-            DocumentPicker(kind: kind, onPick: { url in
-                switch kind {
-                case .p12:
-                    p12.url = url
-                    p12Name = url.lastPathComponent
-                case .prov:
-                    prov.url = url
-                    provName = url.lastPathComponent
-                case .ipa:
-                    break
-                }
-            })
-        }
-        .sheet(isPresented: $showAllOfficial) {
-            NavigationStack {
-                List {
-                    ForEach(officialManager.certs) { cert in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(cert.name)
-                                .font(.headline)
-                            Text(cert.type.rawValue)
-                                .font(.caption)
-                                .foregroundColor(cert.type == .signed ? .green : .orange)
-                            Button(action: {
-                                Task { await officialManager.checkCert(cert) }
-                            }) {
-                                Text("Check")
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 4)
-                                    .background(officialManager.isProcessing ? Color.gray : Color.blue.opacity(0.1))
-                                    .cornerRadius(6)
-                            }
-                            .disabled(officialManager.isProcessing)
-                            if officialManager.isProcessing {
-                                ProgressView("Checking...")
-                                    .scaleEffect(0.7)
-                            }
-                            Text(officialManager.currentStatus)
-                                .font(.caption)
-                                .foregroundColor(officialManager.currentStatus.contains("Success") ? .green : officialManager.currentStatus.isEmpty ? .primary : .red)
-                        }
-                        .padding(.vertical, 2)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showAddCertificateSheet = true }) {
+                        Image(systemName: "plus")
                     }
                 }
-                .navigationTitle("All Certificates")
-                .navigationBarTitleDisplayMode(.inline)
+            }
+            .sheet(isPresented: $showAddCertificateSheet) {
+                AddCertificateView(customCertificates: $customCertificates)
             }
         }
     }
     
-    private func checkCustomStatus() {
-        guard let p12URL = p12.url, let provURL = prov.url else {
-            customStatusMessage = "P12 and MobileProvision do not match"
-            return
-        }
-
-        isProcessing = true
-        customStatusMessage = "Checking..."
-
+    private func checkCertificate(certificate: Binding<CustomCertificate>) {
+        certificate.wrappedValue.isProcessing = true
+        certificate.wrappedValue.status = "Checking..."
+        
         DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let p12Data = try Data(contentsOf: p12URL)
-                let provData = try Data(contentsOf: provURL)
-
-                let result = CertificatesManager.check(p12Data: p12Data, password: p12Password, mobileProvisionData: provData)
-
-                DispatchQueue.main.async {
-                    isProcessing = false
-                    switch result {
-                    case .success(.incorrectPassword):
-                        customStatusMessage = "Incorrect Password"
-                    case .success(.noMatch):
-                        customStatusMessage = "P12 and MobileProvision do not match"
-                    case .success(.success):
-                        customStatusMessage = "Success!"
-                    case .failure(let err):
-                        print("Custom check failed: \(err)")
-                        customStatusMessage = "P12 and MobileProvision do not match"
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    isProcessing = false
-                    print("Custom file read error: \(error)")
-                    customStatusMessage = "P12 and MobileProvision do not match"
+            let result = CertificatesManager.check(
+                p12Data: certificate.wrappedValue.p12Data,
+                password: certificate.wrappedValue.password,
+                mobileProvisionData: certificate.wrappedValue.provData
+            )
+            
+            DispatchQueue.main.async {
+                certificate.wrappedValue.isProcessing = false
+                
+                switch result {
+                case .success(.success):
+                    certificate.wrappedValue.status = "Success!"
+                case .success(.incorrectPassword):
+                    certificate.wrappedValue.status = "Incorrect Password"
+                case .success(.noMatch):
+                    certificate.wrappedValue.status = "P12 and MobileProvision do not match"
+                case .failure:
+                    certificate.wrappedValue.status = "Error checking certificate"
                 }
             }
+        }
+    }
+}
+
+struct AddCertificateView: View {
+    @Binding var customCertificates: [CustomCertificate]
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var p12File: FileItem?
+    @State private var provFile: FileItem?
+    @State private var password = ""
+    
+    enum ActiveSheet: Identifiable {
+        case p12, prov
+        var id: Int { hashValue }
+    }
+    @State private var activeSheet: ActiveSheet?
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Files")) {
+                    Button(action: { activeSheet = .p12 }) {
+                        HStack {
+                            Image(systemName: "lock.doc.fill")
+                            Text("Import Certificate (.p12) File")
+                            Spacer()
+                            if let p12File = p12File {
+                                Text(p12File.name)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    Button(action: { activeSheet = .prov }) {
+                        HStack {
+                            Image(systemName: "gearshape.fill")
+                            Text("Import Provisioning (.mobileprovision) File")
+                            Spacer()
+                            if let provFile = provFile {
+                                Text(provFile.name)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                
+                Section(header: Text("Password")) {
+                    SecureField("Enter Password", text: $password)
+                    Text("Enter the password for the certificate. Leave it blank if there is no password needed.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("New Certificate")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveCertificate()
+                    }
+                    .disabled(p12File == nil || provFile == nil)
+                }
+            }
+            .sheet(item: $activeSheet) { sheetType in
+                DocumentPicker(kind: sheetType == .p12 ? .p12 : .prov) { url in
+                    if sheetType == .p12 {
+                        p12File = FileItem(name: url.lastPathComponent, url: url)
+                    } else {
+                        provFile = FileItem(name: url.lastPathComponent, url: url)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func saveCertificate() {
+        guard let p12File = p12File, 
+              let provFile = provFile,
+              let p12URL = p12File.url,
+              let provURL = provFile.url else { return }
+        
+        do {
+            let p12Data = try Data(contentsOf: p12URL)
+            let provData = try Data(contentsOf: provURL)
+            
+            let newCertificate = CustomCertificate(
+                name: p12File.name,
+                p12Data: p12Data,
+                provData: provData,
+                password: password
+            )
+            
+            customCertificates.append(newCertificate)
+            dismiss()
+        } catch {
+            print("Error reading files: \(error)")
+        }
+    }
+}
+
+struct FileItem {
+    var name: String = ""
+    var url: URL?
+}
+
+enum PickerKind: Identifiable {
+    case p12, prov, ipa
+    var id: Int { hashValue }
+}
+
+struct DocumentPicker: UIViewControllerRepresentable {
+    let kind: PickerKind
+    let onPick: (URL) -> Void
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let supportedTypes: [UTType]
+        
+        switch kind {
+        case .p12:
+            supportedTypes = [UTType(filenameExtension: "p12")!]
+        case .prov:
+            supportedTypes = [UTType(filenameExtension: "mobileprovision")!]
+        case .ipa:
+            supportedTypes = [UTType(filenameExtension: "ipa")!]
+        }
+        
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: true)
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        
+        init(onPick: @escaping (URL) -> Void) {
+            self.onPick = onPick
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
         }
     }
 }
