@@ -2,41 +2,106 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct CertificateView: View {
+    @StateObject private var officialManager = OfficialCertificateManager()
+    
     @State private var p12 = FileItem()
     @State private var prov = FileItem()
     @State private var p12Password = ""
     @State private var isProcessing = false
-    @State private var statusMessage = "" // will hold exactly one of: "Incorrect Password", "P12 and Mobileprovison do not match", "Success!"
+    @State private var customStatusMessage = ""
     @State private var showPickerFor: PickerKind? = nil
+    
+    @State private var showAllOfficial = false
 
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Inputs")
-                            .font(.headline) // Bolder, larger header
+                // Official Certificates Section
+                Section(header: Text("Official Certificates")
+                            .font(.headline)
                             .foregroundColor(.primary)
                             .padding(.top, 8)) {
-                    // P12 picker with icon and truncated file name
+                    Text("Thanks to loyahdev!")
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundColor(.secondary)
+                    
+                    if let featured = officialManager.featuredCert {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(featured.name)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Text(featured.type.rawValue)
+                                .font(.caption)
+                                .foregroundColor(featured.type == .signed ? .green : .orange)
+                            Button(action: { Task { await officialManager.checkCert(featured) } }) {
+                                Text("Check This One")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(officialManager.isProcessing ? Color.gray : Color.green.opacity(0.1))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
+                            }
+                            .disabled(officialManager.isProcessing)
+                            if officialManager.isProcessing {
+                                ProgressView("Checking...")
+                                    .scaleEffect(0.8)
+                            }
+                            Text(officialManager.currentStatus)
+                                .font(.caption)
+                                .foregroundColor(officialManager.currentStatus.contains("Success") ? .green : officialManager.currentStatus.isEmpty ? .primary : .red)
+                                .animation(.easeInOut(duration: 0.3), value: officialManager.currentStatus)
+                        }
+                        .padding(.vertical, 4)
+                    } else if !officialManager.certs.isEmpty {
+                        Text("No featured cert right now—check the full list!")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No certificates found :(")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Button(action: { showAllOfficial = true }) {
+                        HStack {
+                            Spacer()
+                            Text("More Certificates")
+                                .font(.body)
+                                .foregroundColor(.blue)
+                            Image(systemName: "chevron.down")
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                    }
+                }
+                
+                // Custom Certificate Section
+                Section(header: Text("Custom Certificate")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                            .padding(.top, 8)) {
+                    // P12 picker
                     HStack {
-                        Image(systemName: "lock.doc.fill") // Added SF Symbol
+                        Image(systemName: "lock.doc.fill")
                             .foregroundColor(.blue)
                         Text("P12")
                         Spacer()
                         Text(p12.name.isEmpty ? "No file selected" : p12.name)
-                            .font(.caption) // Smaller font for file name
-                            .lineLimit(1) // Truncate long names
+                            .font(.caption)
+                            .lineLimit(1)
                             .foregroundColor(.secondary)
                         Button(action: { showPickerFor = .p12 }) {
                             Text("Pick")
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1)) // Subtle button background
+                                .background(Color.blue.opacity(0.1))
                                 .cornerRadius(8)
                         }
                     }
-                    .padding(.vertical, 4) // More spacing
+                    .padding(.vertical, 4)
 
-                    // MobileProvision picker with icon
+                    // MobileProvision picker
                     HStack {
                         Image(systemName: "gearshape.fill")
                             .foregroundColor(.blue)
@@ -56,7 +121,7 @@ struct CertificateView: View {
                     }
                     .padding(.vertical, 4)
 
-                    // Password field with secure icon
+                    // Password field
                     HStack {
                         Image(systemName: "lock.fill")
                             .foregroundColor(.blue)
@@ -66,64 +131,105 @@ struct CertificateView: View {
                 }
 
                 Section {
-                    Button(action: checkStatus) {
+                    Button(action: checkCustomStatus) {
                         HStack {
                             Spacer()
                             Text("Check Status")
-                                .font(.headline) // Bolder text
+                                .font(.headline)
                                 .foregroundColor(.white)
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(isProcessing || p12.url == nil || prov.url == nil ? Color.gray : Color.blue) // Dynamic color
+                                .background(isProcessing || p12.url == nil || prov.url == nil ? Color.gray : Color.blue)
                                 .cornerRadius(10)
-                                .shadow(radius: 2) // Subtle shadow
+                                .shadow(radius: 2)
                             Spacer()
                         }
                     }
                     .disabled(isProcessing || p12.url == nil || prov.url == nil)
-                    .scaleEffect(isProcessing ? 0.95 : 1.0) // Subtle animation when processing
-                    .animation(.easeInOut(duration: 0.2), value: isProcessing) // Smooth animation
+                    .scaleEffect(isProcessing ? 0.95 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: isProcessing)
                 }
                 .padding(.vertical, 8)
 
-                Section(header: Text("Result")
+                Section(header: Text("Custom Result")
                             .font(.headline)
                             .foregroundColor(.primary)
                             .padding(.top, 8)) {
                     HStack {
                         if isProcessing {
-                            ProgressView() // Spinner for processing
+                            ProgressView()
                                 .padding(.trailing, 8)
                         }
-                        Text(statusMessage)
-                            .foregroundColor(statusMessage == "Success!" ? .green : statusMessage.isEmpty ? .primary : .red) // Green for success, red for errors
-                            .animation(.easeIn, value: statusMessage) // Fade animation for status changes
+                        Text(customStatusMessage)
+                            .foregroundColor(customStatusMessage == "Success!" ? .green : customStatusMessage.isEmpty ? .primary : .red)
+                            .animation(.easeIn, value: customStatusMessage)
                     }
                 }
             }
-            .navigationTitle("Certificate Checker")
+            .navigationTitle("Certificate App")
             .navigationBarTitleDisplayMode(.inline)
-            .accentColor(.blue) // Custom accent color
+            .accentColor(.blue)
+            .task {
+                await officialManager.loadCerts()
+            }
         }
         .sheet(item: $showPickerFor, onDismiss: nil) { kind in
             DocumentPicker(kind: kind, onPick: { url in
                 switch kind {
-                case .ipa: break // not used here
-                case .p12: p12.url = url
-                case .prov: prov.url = url
+                case .p12:
+                    p12.url = url
+                    p12.name = url.lastPathComponent
+                case .prov:
+                    prov.url = url
+                    prov.name = url.lastPathComponent
                 }
             })
         }
+        .sheet(isPresented: $showAllOfficial) {
+            NavigationStack {
+                List {
+                    ForEach(officialManager.certs) { cert in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(cert.name)
+                                .font(.headline)
+                            Text(cert.type.rawValue)
+                                .font(.caption)
+                                .foregroundColor(cert.type == .signed ? .green : .orange)
+                            Button(action: {
+                                Task { await officialManager.checkCert(cert) }
+                            }) {
+                                Text("Check")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .background(officialManager.isProcessing ? Color.gray : Color.blue.opacity(0.1))
+                                    .cornerRadius(6)
+                            }
+                            .disabled(officialManager.isProcessing)
+                            if officialManager.isProcessing {
+                                ProgressView("Checking...")
+                                    .scaleEffect(0.7)
+                            }
+                            Text(officialManager.currentStatus)
+                                .font(.caption)
+                                .foregroundColor(officialManager.currentStatus.contains("Success") ? .green : officialManager.currentStatus.isEmpty ? .primary : .red)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                .navigationTitle("All Certificates")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        }
     }
-
-    private func checkStatus() {
+    
+    private func checkCustomStatus() {
         guard let p12URL = p12.url, let provURL = prov.url else {
-            statusMessage = "P12 and Mobileprovison do not match"
+            customStatusMessage = "P12 and MobileProvision do not match"
             return
         }
 
         isProcessing = true
-        statusMessage = "Checking..."
+        customStatusMessage = "Checking..."
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
@@ -136,24 +242,21 @@ struct CertificateView: View {
                     isProcessing = false
                     switch result {
                     case .success(.incorrectPassword):
-                        statusMessage = "Incorrect Password" // EXACT text requested
+                        customStatusMessage = "Incorrect Password"
                     case .success(.noMatch):
-                        statusMessage = "P12 and Mobileprovison do not match" // EXACT text requested
+                        customStatusMessage = "P12 and MobileProvision do not match"
                     case .success(.success):
-                        statusMessage = "Success!" // EXACT text requested
+                        customStatusMessage = "Success!"
                     case .failure(let err):
-                        // If there was an unexpected error, surface a no-match (safe) or show error (dev)
-                        // We'll show no-match so user gets one of the three expected messages; but log the error.
-                        print("Certificates check failed: \(err)")
-                        statusMessage = "P12 and Mobileprovison do not match"
+                        print("Custom check failed: \(err)")
+                        customStatusMessage = "P12 and MobileProvision do not match"
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
                     isProcessing = false
-                    // If the password is wrong we already catch that above. Reading files failed -> show no-match
-                    print("File read error: \(error)")
-                    statusMessage = "P12 and Mobileprovison do not match"
+                    print("Custom file read error: \(error)")
+                    customStatusMessage = "P12 and MobileProvision do not match"
                 }
             }
         }

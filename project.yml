@@ -24,14 +24,14 @@ targets:
     settings:
       IPHONEOS_DEPLOYMENT_TARGET: "16.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
-      SWIFT_OPTIMIZATION_LEVEL: "-Owholemodule" # optimized for Release
+      SWIFT_OPTIMIZATION_LEVEL: "-Owholemodule"
     info:
       path: "Info.plist"
       properties:
         CFBundleDisplayName: "ProStore"
         CFBundleName: "prostore"
-        CFBundleVersion: "21"
-        CFBundleShortVersionString: "1.3.2"
+        CFBundleVersion: "22"
+        CFBundleShortVersionString: "1.4.0"
         UILaunchStoryboardName: "LaunchScreen"
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:

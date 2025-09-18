@@ -1,3 +1,4 @@
+// AboutView.swift
 import SwiftUI
 
 struct Credit: Identifiable {
@@ -27,6 +28,12 @@ struct AboutView: View {
             role: "Developer",
             profileURL: URL(string: "https://github.com/SuperGamer474")!,
             avatarURL: URL(string: "https://github.com/SuperGamer474.png")!
+        ),
+        Credit(
+            name: "loyahdev",
+            role: "iOS Certificates Source",
+            profileURL: URL(string: "https://github.com/loyahdev")!,
+            avatarURL: URL(string: "https://github.com/loyahdev.png")!
         )
     ]
 
@@ -126,10 +133,16 @@ struct CreditRow: View {
             } label: {
                 Image(systemName: "arrow.up.right.square")
                     .imageScale(.large)
-                    .foregroundColor(.primary) // Neutral color instead of blue
+                    .foregroundColor(.primary)
             }
             .buttonStyle(BorderlessButtonStyle())
         }
         .padding(.vertical, 8)
+    }
+}
+
+struct AboutView_Previews: PreviewProvider {
+    static var previews: some View {
+        AboutView()
     }
 }
