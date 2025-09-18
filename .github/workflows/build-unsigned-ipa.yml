@@ -9,6 +9,7 @@ on:
       - 'app-repo.json'
       - 'gallery/**'
       - 'website/**'
+      - '.github/**'
 
 permissions:
   contents: write
