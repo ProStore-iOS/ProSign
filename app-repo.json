@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.4.2",
+          "date": "2025-09-18T07:56:46+0000",
+          "localizedDescription": "What's new in Version 1.4.2?\n- Update to v1.4.2\n- Add better cert handling",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.4.2/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3545477,
+          "sha256": "e0ac2ef3eb5f94361ba10af6cea0c7053345f1d155ef473f236b65706664743b",
+          "minOSVersion": "16.0",
+          "fullDate": "20250918075646"
+        },
+        {
           "version": "1.4.1",
           "date": "2025-09-18T07:46:02+0000",
           "localizedDescription": "What's new in Version 1.4.1?\n- Bug fixes and improvements\n- Fix: Use display names for files (read-only name prop) + wrap deprecated Archive init in do-catch\n- Minor bug fixes\n- Add simulator build",
