@@ -6,6 +6,8 @@ struct CertificateView: View {
     
     @State private var p12 = FileItem()
     @State private var prov = FileItem()
+    @State private var p12Name: String = ""
+    @State private var provName: String = ""
     @State private var p12Password = ""
     @State private var isProcessing = false
     @State private var customStatusMessage = ""
@@ -87,7 +89,7 @@ struct CertificateView: View {
                             .foregroundColor(.blue)
                         Text("P12")
                         Spacer()
-                        Text(p12.name.isEmpty ? "No file selected" : p12.name)
+                        Text(p12Name.isEmpty ? "No file selected" : p12Name) // Use p12Name here
                             .font(.caption)
                             .lineLimit(1)
                             .foregroundColor(.secondary)
@@ -107,7 +109,7 @@ struct CertificateView: View {
                             .foregroundColor(.blue)
                         Text("MobileProvision")
                         Spacer()
-                        Text(prov.name.isEmpty ? "No file selected" : prov.name)
+                        Text(provName.isEmpty ? "No file selected" : provName) // Use provName here
                             .font(.caption)
                             .lineLimit(1)
                             .foregroundColor(.secondary)
@@ -178,10 +180,10 @@ struct CertificateView: View {
                 switch kind {
                 case .p12:
                     p12.url = url
-                    p12.name = url.lastPathComponent
+                    p12Name = url.lastPathComponent // Set display name here instead
                 case .prov:
                     prov.url = url
-                    prov.name = url.lastPathComponent
+                    provName = url.lastPathComponent // Same for prov
                 }
             })
         }
