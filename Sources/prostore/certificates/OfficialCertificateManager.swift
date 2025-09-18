@@ -12,6 +12,8 @@ struct Cert: Identifiable, Hashable {
     let downloadURL: URL
     let type: CertType
     let lastModified: Date?
+    var status: String = ""
+    var isProcessing: Bool = false
 }
 
 @MainActor
@@ -106,24 +108,30 @@ class OfficialCertificateManager: ObservableObject {
     }
     
     func checkCert(_ cert: Cert) async {
+        // Find the cert in our list so we can update its individual state
+        guard let index = certs.firstIndex(where: { $0.id == cert.id }) else { return }
+
+        // Mark this cert as processing (individual + global)
+        certs[index].isProcessing = true
+        certs[index].status = "Checking..."
         isProcessing = true
-        currentStatus = "Checking..."
-        
+        currentStatus = certs[index].status
+
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer {
             try? FileManager.default.removeItem(at: tempDir)
         }
-        
+
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
-            
+
             let (zipData, _) = try await URLSession.shared.data(from: cert.downloadURL)
             let tempZipURL = tempDir.appendingPathComponent("cert.zip")
             try zipData.write(to: tempZipURL)
-            
+
             // Unzip using ZIPFoundation
             try FileManager.default.unzipItem(at: tempZipURL, to: tempDir)
-            
+
             // Find the extraction directory (root or single subdir)
             let contents = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
             var searchDir = tempDir
@@ -134,47 +142,52 @@ class OfficialCertificateManager: ObservableObject {
                     searchDir = firstItem
                 }
             }
-            
+
             let fileContents = try FileManager.default.contentsOfDirectory(at: searchDir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
             var p12URL: URL?
             var provURL: URL?
             var txtURL: URL?
-            
+
             for url in fileContents {
                 let ext = url.pathExtension.lowercased()
                 if ext == "p12" { p12URL = url }
                 else if ext == "mobileprovision" { provURL = url }
                 else if ext == "txt" { txtURL = url }
             }
-            
+
             guard let p12U = p12URL, let provU = provURL, let txtU = txtURL else {
+                certs[index].status = "Error: Missing p12, mobileprovision or txt"
+                currentStatus = certs[index].status
                 throw NSError(domain: "MissingFiles", code: 1, userInfo: [NSLocalizedDescriptionKey: "Zip missing p12, provision, or txt"])
             }
-            
+
             let txtData = try Data(contentsOf: txtU)
             let password = String(data: txtData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            
+
             let p12Data = try Data(contentsOf: p12U)
             let provData = try Data(contentsOf: provU)
-            
+
             let result = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
-            
+
             switch result {
             case .success(.success):
-                currentStatus = "Success!"
+                certs[index].status = "Success!"
             case .success(.incorrectPassword):
-                currentStatus = "Incorrect Password"
+                certs[index].status = "Incorrect Password"
             case .success(.noMatch):
-                currentStatus = "P12 and MobileProvision do not match"
+                certs[index].status = "P12 and MobileProvision do not match"
             case .failure(let err):
                 print("Official check error: \(err)")
-                currentStatus = "P12 and MobileProvision do not match"
+                certs[index].status = "P12 and MobileProvision do not match"
             }
         } catch {
             print("Official cert process error: \(error)")
-            currentStatus = "Error: Couldn't process zip"
+            certs[index].status = "Error: Couldn't process zip"
         }
-        
-        isProcessing = false
+
+        // Turn off this cert's processing flag and refresh global processing state + currentStatus
+        certs[index].isProcessing = false
+        isProcessing = certs.contains(where: { $0.isProcessing })
+        currentStatus = certs[index].status
     }
 }
