@@ -21,7 +21,7 @@ public enum CertificateError: Error {
 
 public final class CertificatesManager {
     // SHA256 hex from Data
-    private static func sha256Hex(_ d: Data) -> String {
+    static func sha256Hex(_ d: Data) -> String {
         let digest = SHA256.hash(data: d)
         return digest.map { String(format: "%02x", $0) }.joined()
     }
@@ -84,6 +84,25 @@ public final class CertificatesManager {
         }
         
         return resultCerts
+    }
+    
+    /// Get the certificate's display name (subject summary)
+    public static func getCertificateName(p12Data: Data, password: String) -> String? {
+        let options = [kSecImportExportPassphrase as String: password] as CFDictionary
+        var itemsCF: CFArray?
+        let importStatus = SecPKCS12Import(p12Data as CFData, options, &itemsCF)
+        guard importStatus == errSecSuccess,
+              let items = itemsCF as? [[String: Any]],
+              let first = items.first else {
+            return nil
+        }
+        let identity = first[kSecImportItemIdentity as String] as! SecIdentity
+        var certRef: SecCertificate?
+        let certStatus = SecIdentityCopyCertificate(identity, &certRef)
+        guard certStatus == errSecSuccess, let cert = certRef else {
+            return nil
+        }
+        return SecCertificateCopySubjectSummary(cert) as String?
     }
     
     /// Top-level check: returns result
