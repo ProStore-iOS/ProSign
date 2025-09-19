@@ -109,6 +109,53 @@ class CertificateFileManager {
         return candidate
     }
     
+    func updateCertificate(folderName: String, p12Data: Data, provData: Data, password: String, displayName: String) throws {
+        let certificateFolder = certificatesDirectory.appendingPathComponent(folderName)
+        guard fileManager.fileExists(atPath: certificateFolder.path) else {
+            throw NSError(domain: "CertificateFileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Certificate folder not found"])
+        }
+        
+        let p12HashNew = CertificatesManager.sha256Hex(p12Data)
+        let provHashNew = CertificatesManager.sha256Hex(provData)
+        let passwordHashNew = CertificatesManager.sha256Hex(password.data(using: .utf8) ?? Data())
+        
+        // Check if new version identical to any other existing (exclude self)
+        let existingFolders = try fileManager.contentsOfDirectory(at: certificatesDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        for folder in existingFolders {
+            if folder == certificateFolder { continue }
+            
+            let p12URL = folder.appendingPathComponent("certificate.p12")
+            let provURL = folder.appendingPathComponent("profile.mobileprovision")
+            let passwordURL = folder.appendingPathComponent("password.txt")
+            
+            if fileManager.fileExists(atPath: p12URL.path) && fileManager.fileExists(atPath: provURL.path) && fileManager.fileExists(atPath: passwordURL.path) {
+                do {
+                    let existingP12Data = try Data(contentsOf: p12URL)
+                    let existingProvData = try Data(contentsOf: provURL)
+                    let existingPasswordData = try Data(contentsOf: passwordURL)
+                    let existingPassword = String(data: existingPasswordData, encoding: .utf8) ?? ""
+                    
+                    let p12HashExisting = CertificatesManager.sha256Hex(existingP12Data)
+                    let provHashExisting = CertificatesManager.sha256Hex(existingProvData)
+                    let passwordHashExisting = CertificatesManager.sha256Hex(existingPassword.data(using: .utf8) ?? Data())
+                    
+                    if p12HashNew == p12HashExisting && provHashNew == provHashExisting && passwordHashNew == passwordHashExisting {
+                        throw NSError(domain: "CertificateFileManager", code: 2, userInfo: [NSLocalizedDescriptionKey: "This updated certificate matches another existing one"])
+                    }
+                } catch {
+                    // Skip if can't read existing
+                    continue
+                }
+            }
+        }
+        
+        // Overwrite files
+        try p12Data.write(to: certificateFolder.appendingPathComponent("certificate.p12"))
+        try provData.write(to: certificateFolder.appendingPathComponent("profile.mobileprovision"))
+        try password.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("password.txt"))
+        try displayName.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("name.txt"))
+    }
+    
     func deleteCertificate(folderName: String) throws {
         let certificateFolder = certificatesDirectory.appendingPathComponent(folderName)
         try fileManager.removeItem(at: certificateFolder)
@@ -123,35 +170,70 @@ class CertificateFileManager {
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
     @State private var showAddCertificateSheet = false
+    @State private var editingFolder: String? = nil
     @State private var selectedCert: String? = nil
+    @State private var showingDeleteAlert = false
+    @State private var certToDelete: CustomCertificate?
     
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(spacing: 20) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                     ForEach(customCertificates) { cert in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(cert.displayName)
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
-                        }
-                        .padding(20)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
-                        )
-                        .onTapGesture {
-                            if selectedCert == cert.folderName {
-                                selectedCert = nil
-                                UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
-                            } else {
-                                selectedCert = cert.folderName
-                                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                        ZStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(cert.displayName)
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
                             }
+                            .padding(20)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
+                            )
+                            .onTapGesture {
+                                if selectedCert == cert.folderName {
+                                    selectedCert = nil
+                                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+                                } else {
+                                    selectedCert = cert.folderName
+                                    UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                                }
+                            }
+                            
+                            HStack {
+                                Button(action: {
+                                    editingFolder = cert.folderName
+                                    showAddCertificateSheet = true
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                        .padding(8)
+                                        .background(Color.white.opacity(0.8))
+                                        .clipShape(Circle())
+                                }
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    certToDelete = cert
+                                    showingDeleteAlert = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                        .font(.caption)
+                                        .padding(8)
+                                        .background(Color.white.opacity(0.8))
+                                        .clipShape(Circle())
+                                }
+                            }
+                            .padding(.top, 12)
+                            .padding(.horizontal, 12)
                         }
                     }
                 }
@@ -161,21 +243,35 @@ struct CertificateView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showAddCertificateSheet = true }) {
+                    Button(action: {
+                        editingFolder = nil
+                        showAddCertificateSheet = true
+                    }) {
                         Image(systemName: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
+                editingFolder = nil
                 // Re-check selected after reload
                 if let sel = selectedCert, !customCertificates.contains(where: { $0.folderName == sel }) {
                     selectedCert = nil
                     UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
                 }
             }) {
-                AddCertificateView()
+                AddCertificateView(editingFolder: editingFolder)
                     .presentationDetents([.large])
+            }
+            .alert("Delete Certificate?", isPresented: $showingDeleteAlert) {
+                Button("Delete", role: .destructive) {
+                    if let cert = certToDelete {
+                        deleteCertificate(cert)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure? This can't be undone.")
             }
             .onAppear {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
@@ -187,10 +283,20 @@ struct CertificateView: View {
             }
         }
     }
+    
+    private func deleteCertificate(_ cert: CustomCertificate) {
+        try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
+        customCertificates = CertificateFileManager.shared.loadCertificates()
+        if selectedCert == cert.folderName {
+            selectedCert = nil
+            UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+        }
+    }
 }
 
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
+    let editingFolder: String?
     
     @State private var p12File: CertificateFileItem?
     @State private var provFile: CertificateFileItem?
@@ -198,6 +304,10 @@ struct AddCertificateView: View {
     @State private var activeSheet: CertificatePickerKind?
     @State private var isChecking = false
     @State private var errorMessage = ""
+    
+    init(editingFolder: String? = nil) {
+        self.editingFolder = editingFolder
+    }
     
     var body: some View {
         NavigationView {
@@ -248,11 +358,11 @@ struct AddCertificateView: View {
                         .font(.subheadline)
                 }
             }
-            .navigationTitle("New Certificate")
+            .navigationTitle(editingFolder != nil ? "Edit Certificate" : "New Certificate")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("X") {
+                    Button("×") {
                         dismiss()
                     }
                     .disabled(isChecking)
@@ -282,6 +392,25 @@ struct AddCertificateView: View {
             .onChange(of: password) { _ in
                 errorMessage = ""
             }
+            .onAppear {
+                if let folder = editingFolder {
+                    loadForEdit(folder: folder)
+                }
+            }
+        }
+    }
+    
+    private func loadForEdit(folder: String) {
+        let certFolder = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(folder)
+        let p12URL = certFolder.appendingPathComponent("certificate.p12")
+        let provURL = certFolder.appendingPathComponent("profile.mobileprovision")
+        let passwordURL = certFolder.appendingPathComponent("password.txt")
+        
+        p12File = CertificateFileItem(name: "certificate.p12", url: p12URL)
+        provFile = CertificateFileItem(name: "profile.mobileprovision", url: provURL)
+        
+        if let pwData = try? Data(contentsOf: passwordURL), let pw = String(data: pwData, encoding: .utf8) {
+            password = pw
         }
     }
     
@@ -293,30 +422,40 @@ struct AddCertificateView: View {
         
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                // Access security-scoped resources
-                guard p12URL.startAccessingSecurityScopedResource() else {
-                    throw NSError(domain: "AccessError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot access P12 file"])
+                var p12Data: Data
+                var provData: Data
+                if editingFolder != nil {
+                    // For edit, files are in app container, no security scope needed
+                    p12Data = try Data(contentsOf: p12URL)
+                    provData = try Data(contentsOf: provURL)
+                } else {
+                    // For new, access security-scoped
+                    guard p12URL.startAccessingSecurityScopedResource() else {
+                        throw NSError(domain: "AccessError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot access P12 file"])
+                    }
+                    defer { p12URL.stopAccessingSecurityScopedResource() }
+                    
+                    guard provURL.startAccessingSecurityScopedResource() else {
+                        throw NSError(domain: "AccessError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot access Provision file"])
+                    }
+                    defer { provURL.stopAccessingSecurityScopedResource() }
+                    
+                    p12Data = try Data(contentsOf: p12URL)
+                    provData = try Data(contentsOf: provURL)
                 }
-                defer { p12URL.stopAccessingSecurityScopedResource() }
-                
-                guard provURL.startAccessingSecurityScopedResource() else {
-                    throw NSError(domain: "AccessError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot access Provision file"])
-                }
-                defer { provURL.stopAccessingSecurityScopedResource() }
-                
-                let p12Data = try Data(contentsOf: p12URL)
-                let provData = try Data(contentsOf: provURL)
                 
                 let result = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
                 
                 var dispatchError: String?
                 switch result {
                 case .success(.success):
-                    // Get dynamic name
                     let displayName = CertificatesManager.getCertificateName(p12Data: p12Data, password: password) ?? "Custom Certificate"
                     
-                    // Save
-                    _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: password, displayName: displayName)
+                    if let folder = editingFolder {
+                        try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
+                    } else {
+                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: password, displayName: displayName)
+                    }
                 case .success(.incorrectPassword):
                     dispatchError = "Incorrect Password"
                 case .success(.noMatch):
