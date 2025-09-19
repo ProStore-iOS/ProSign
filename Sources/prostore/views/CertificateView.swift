@@ -16,8 +16,8 @@ struct CustomCertificate: Identifiable {
 
 class CertificateFileManager {
     static let shared = CertificateFileManager()
-    private let fileManager = FileManager.default
-    private let certificatesDirectory: URL
+    let fileManager = FileManager.default
+    let certificatesDirectory: URL
     
     private init() {
         let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
