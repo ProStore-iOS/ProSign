@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.5.1",
+          "date": "2025-09-19T23:02:56+0000",
+          "localizedDescription": "What's new in Version 1.5.1?\n- Fix bug where prefilled certificate wouldn't load & Update to v1.5.1\n- Make certificatesDirectory public\n- Ensure one certificate is selected\n- Change order of names in AboutView",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.5.1/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3536105,
+          "sha256": "32245a9e763d23eedc70db698c75d67f01c2697dead66429761f6b7a31650265",
+          "minOSVersion": "16.0",
+          "fullDate": "20250919230256"
+        },
+        {
           "version": "1.5.0",
           "date": "2025-09-19T07:16:36+0000",
           "localizedDescription": "What's new in Version 1.5.0?\n- Make certificatesDirectory public\n- Rename some stuff. Nothing major.\n- Make certificates view better and add edit and delete buttons",
