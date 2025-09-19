@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.4.6",
+          "date": "2025-09-19T06:57:12+0000",
+          "localizedDescription": "What's new in Version 1.4.6?\n- The 27th release of prostore! v1.4.6!\n- UI Fixes",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.4.6/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3522892,
+          "sha256": "bc0944e645b4f96f55b4a5ea9f20c1f2ea80b79280d07fda8843779ca961fba3",
+          "minOSVersion": "16.0",
+          "fullDate": "20250919065712"
+        },
+        {
           "version": "1.4.5",
           "date": "2025-09-19T06:42:28+0000",
           "localizedDescription": "What's new in Version 1.4.5?\n- Update to v1.4.5\n- Minor bug fixes\n- Remove device from simulator build\n- Add persistent certificates and minor UI changes",
