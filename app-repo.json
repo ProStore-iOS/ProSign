@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.5.0",
+          "date": "2025-09-19T07:16:36+0000",
+          "localizedDescription": "What's new in Version 1.5.0?\n- Make certificatesDirectory public\n- Rename some stuff. Nothing major.\n- Make certificates view better and add edit and delete buttons",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.5.0/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3533309,
+          "sha256": "54c1d328ec21537f19b1e706d70b8952f2fc27e8bc8fd9cf38d1795431e6ee65",
+          "minOSVersion": "16.0",
+          "fullDate": "20250919071636"
+        },
+        {
           "version": "1.4.6",
           "date": "2025-09-19T06:57:12+0000",
           "localizedDescription": "What's new in Version 1.4.6?\n- The 27th release of prostore! v1.4.6!\n- UI Fixes",
