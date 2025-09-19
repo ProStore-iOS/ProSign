@@ -170,7 +170,7 @@ class CertificateFileManager {
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
     @State private var showAddCertificateSheet = false
-    @State private var editingFolder: String? = nil
+    @State private var editingCertificate: CustomCertificate? = nil
     @State private var selectedCert: String? = nil
     @State private var showingDeleteAlert = false
     @State private var certToDelete: CustomCertificate?
@@ -211,7 +211,7 @@ struct CertificateView: View {
                             
                             HStack {
                                 Button(action: {
-                                    editingFolder = cert.folderName
+                                    editingCertificate = cert
                                     showAddCertificateSheet = true
                                 }) {
                                     Image(systemName: "pencil")
@@ -252,7 +252,7 @@ struct CertificateView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        editingFolder = nil
+                        editingCertificate = nil
                         showAddCertificateSheet = true
                     }) {
                         Image(systemName: "plus")
@@ -261,12 +261,17 @@ struct CertificateView: View {
             }
             .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
-                editingFolder = nil
+                editingCertificate = nil
                 // Ensure at least one certificate is selected
                 ensureSelection()
             }) {
-                AddCertificateView(editingFolder: editingFolder)
-                    .presentationDetents([.large])
+                if let editingCertificate = editingCertificate {
+                    AddCertificateView(editingCertificate: editingCertificate)
+                        .presentationDetents([.large])
+                } else {
+                    AddCertificateView()
+                        .presentationDetents([.large])
+                }
             }
             .alert("Delete Certificate?", isPresented: $showingDeleteAlert) {
                 Button("Delete", role: .destructive) {
@@ -320,7 +325,7 @@ struct CertificateView: View {
 
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
-    let editingFolder: String?
+    let editingCertificate: CustomCertificate?
     
     @State private var p12File: CertificateFileItem?
     @State private var provFile: CertificateFileItem?
@@ -328,9 +333,10 @@ struct AddCertificateView: View {
     @State private var activeSheet: CertificatePickerKind?
     @State private var isChecking = false
     @State private var errorMessage = ""
+    @State private var hasLoadedForEdit = false
     
-    init(editingFolder: String? = nil) {
-        self.editingFolder = editingFolder
+    init(editingCertificate: CustomCertificate? = nil) {
+        self.editingCertificate = editingCertificate
     }
     
     var body: some View {
@@ -382,7 +388,7 @@ struct AddCertificateView: View {
                         .font(.subheadline)
                 }
             }
-            .navigationTitle(editingFolder != nil ? "Edit Certificate" : "New Certificate")
+            .navigationTitle(editingCertificate != nil ? "Edit Certificate" : "New Certificate")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -417,15 +423,17 @@ struct AddCertificateView: View {
                 errorMessage = ""
             }
             .onAppear {
-                if let folder = editingFolder {
-                    loadForEdit(folder: folder)
+                // Load data for editing only once and only if we haven't already loaded it
+                if let cert = editingCertificate, !hasLoadedForEdit {
+                    loadForEdit(cert: cert)
+                    hasLoadedForEdit = true
                 }
             }
         }
     }
     
-    private func loadForEdit(folder: String) {
-        let certFolder = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(folder)
+    private func loadForEdit(cert: CustomCertificate) {
+        let certFolder = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(cert.folderName)
         let p12URL = certFolder.appendingPathComponent("certificate.p12")
         let provURL = certFolder.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certFolder.appendingPathComponent("password.txt")
@@ -448,7 +456,7 @@ struct AddCertificateView: View {
             do {
                 var p12Data: Data
                 var provData: Data
-                if editingFolder != nil {
+                if editingCertificate != nil {
                     // For edit, files are in app container, no security scope needed
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
@@ -475,7 +483,7 @@ struct AddCertificateView: View {
                 case .success(.success):
                     let displayName = CertificatesManager.getCertificateName(p12Data: p12Data, password: password) ?? "Custom Certificate"
                     
-                    if let folder = editingFolder {
+                    if let folder = editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
                     } else {
                         _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: password, displayName: displayName)
