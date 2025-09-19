@@ -12,6 +12,12 @@ struct Credit: Identifiable {
 struct AboutView: View {
     private let credits: [Credit] = [
         Credit(
+            name: "SuperGamer474",
+            role: "Developer",
+            profileURL: URL(string: "https://github.com/SuperGamer474")!,
+            avatarURL: URL(string: "https://github.com/SuperGamer474.png")!
+        ),
+        Credit(
             name: "zhlynn",
             role: "Original zsign",
             profileURL: URL(string: "https://github.com/zhlynn")!,
@@ -22,12 +28,6 @@ struct AboutView: View {
             role: "Zsign-Package (fork)",
             profileURL: URL(string: "https://github.com/khcrysalis")!,
             avatarURL: URL(string: "https://github.com/khcrysalis.png")!
-        ),
-        Credit(
-            name: "SuperGamer474",
-            role: "Developer",
-            profileURL: URL(string: "https://github.com/SuperGamer474")!,
-            avatarURL: URL(string: "https://github.com/SuperGamer474.png")!
         ),
         Credit(
             name: "loyahdev",
