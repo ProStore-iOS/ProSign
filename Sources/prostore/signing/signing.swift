@@ -17,7 +17,8 @@ class SigningManager {
         removeProvision: Bool,
         completion: @escaping (Bool, Error?) -> Void
     ) {
-        Zsign.sign(
+        // Explicitly discard result to silence "result unused" warning
+        _ = Zsign.sign(
             appPath: appPath,
             provisionPath: provisionPath,
             p12Path: p12Path,
@@ -45,11 +46,10 @@ class SigningManager {
         let localP12 = inputsDir.appendingPathComponent(p12URL.lastPathComponent)
         let localProv = inputsDir.appendingPathComponent(provURL.lastPathComponent)
         
-        // Remove existing files if they exist
-        [localIPA, localP12, localProv].forEach { 
-            if fm.fileExists(atPath: $0.path) { 
-                try? fm.removeItem(at: $0) 
-            } 
+        [localIPA, localP12, localProv].forEach {
+            if fm.fileExists(atPath: $0.path) {
+                try? fm.removeItem(at: $0)
+            }
         }
         
         try fm.copyItem(at: ipaURL, to: localIPA)
@@ -60,9 +60,8 @@ class SigningManager {
     }
     
     static func extractIPA(ipaURL: URL, to workDir: URL) throws {
-        guard let archive = Archive(url: ipaURL, accessMode: .read) else {
-            throw NSError(domain: "Zsign", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to open IPA archive"])
-        }
+        // Use throwing initializer (deprecated non-throwing variant removed)
+        let archive = try Archive(url: ipaURL, accessMode: .read)
         
         let fm = FileManager.default
         for entry in archive {
@@ -71,7 +70,8 @@ class SigningManager {
             if entry.type == .directory {
                 try fm.createDirectory(at: dest, withIntermediateDirectories: true)
             } else {
-                try archive.extract(entry, to: dest)
+                // Explicit discard in case extract returns a value in this version
+                _ = try archive.extract(entry, to: dest)
             }
         }
     }
@@ -93,14 +93,12 @@ class SigningManager {
     static func createSignedIPA(from workDir: URL, originalIPAURL: URL, outputDir: URL) throws -> URL {
         let fm = FileManager.default
         
-        // Use the original IPA name (without .ipa) as the prefix for the final file
         let originalBase = originalIPAURL.deletingPathExtension().lastPathComponent
         let finalFileName = "\(originalBase)_signed_\(UUID().uuidString).ipa"
         let signedIpa = outputDir.appendingPathComponent(finalFileName)
         
-        guard let writeArchive = Archive(url: signedIpa, accessMode: .create) else {
-            throw NSError(domain: "Zsign", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create IPA archive"])
-        }
+        // Throwing initializer
+        let writeArchive = try Archive(url: signedIpa, accessMode: .create)
         
         let enumerator = fm.enumerator(at: workDir, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
         var directories: [URL] = []
@@ -150,11 +148,9 @@ class SigningManager {
             do {
                 progressUpdate("Preparing files 📂")
                 
-                // Create temporary workspace
                 let (tmpRoot, inputsDir, workDir) = try prepareTemporaryWorkspace()
                 defer { cleanupTemporaryFiles(at: tmpRoot) }
                 
-                // Copy input files
                 let (localIPA, localP12, localProv) = try copyInputFiles(
                     ipaURL: ipaURL,
                     p12URL: p12URL,
@@ -162,18 +158,16 @@ class SigningManager {
                     to: inputsDir
                 )
                 
-                // Extract IPA
                 progressUpdate("Unzipping IPA 🔓")
                 try extractIPA(ipaURL: localIPA, to: workDir)
                 
-                // Find app bundle
                 let payloadDir = workDir.appendingPathComponent("Payload")
                 let appDir = try findAppBundle(in: payloadDir)
                 
-                // Sign the app
                 progressUpdate("Signing \(appDir.lastPathComponent) ✍️")
                 
-                var signingCompleted = false
+                // Replace spin-wait with semaphore (optional improvement)
+                let sema = DispatchSemaphore(value: 0)
                 var signingError: Error?
                 
                 sign(
@@ -182,23 +176,15 @@ class SigningManager {
                     p12Path: localP12.path,
                     p12Password: p12Password,
                     entitlementsPath: "",
-                    removeProvision: false,
-                    completion: { success, error in
-                        signingCompleted = true
-                        signingError = error
-                    }
-                )
-                
-                // Wait for signing to complete
-                while !signingCompleted {
-                    Thread.sleep(forTimeInterval: 0.1)
+                    removeProvision: false
+                ) { _, error in
+                    signingError = error
+                    sema.signal()
                 }
                 
-                if let error = signingError {
-                    throw error
-                }
+                sema.wait()
+                if let error = signingError { throw error }
                 
-                // Create signed IPA
                 progressUpdate("Zipping signed IPA 📦")
                 let signedIPAURL = try createSignedIPA(
                     from: workDir,
