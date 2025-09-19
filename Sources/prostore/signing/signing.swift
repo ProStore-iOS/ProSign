@@ -61,7 +61,7 @@ class SigningManager {
     
     static func extractIPA(ipaURL: URL, to workDir: URL) throws {
         guard let archive = Archive(url: ipaURL, accessMode: .read) else {
-            throw NSError(domain: "ZsignOnDevice", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to open IPA archive"])
+            throw NSError(domain: "Zsign", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to open IPA archive"])
         }
         
         let fm = FileManager.default
@@ -79,12 +79,12 @@ class SigningManager {
     static func findAppBundle(in payloadDir: URL) throws -> URL {
         let fm = FileManager.default
         guard fm.fileExists(atPath: payloadDir.path) else {
-            throw NSError(domain: "ZsignOnDevice", code: 1, userInfo: [NSLocalizedDescriptionKey: "Payload not found"])
+            throw NSError(domain: "Zsign", code: 1, userInfo: [NSLocalizedDescriptionKey: "Payload not found"])
         }
         
         let contents = try fm.contentsOfDirectory(atPath: payloadDir.path)
         guard let appName = contents.first(where: { $0.hasSuffix(".app") }) else {
-            throw NSError(domain: "ZsignOnDevice", code: 2, userInfo: [NSLocalizedDescriptionKey: "No .app bundle in Payload"])
+            throw NSError(domain: "Zsign", code: 2, userInfo: [NSLocalizedDescriptionKey: "No .app bundle in Payload"])
         }
         
         return payloadDir.appendingPathComponent(appName)
@@ -99,7 +99,7 @@ class SigningManager {
         let signedIpa = outputDir.appendingPathComponent(finalFileName)
         
         guard let writeArchive = Archive(url: signedIpa, accessMode: .create) else {
-            throw NSError(domain: "ZsignOnDevice", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create IPA archive"])
+            throw NSError(domain: "Zsign", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create IPA archive"])
         }
         
         let enumerator = fm.enumerator(at: workDir, includingPropertiesForKeys: [.isDirectoryKey], options: [], errorHandler: nil)!
