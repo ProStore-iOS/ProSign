@@ -123,28 +123,44 @@ class CertificateFileManager {
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
     @State private var showAddCertificateSheet = false
+    @State private var selectedCert: String? = nil
     
     var body: some View {
         NavigationStack {
-            List {
-                Section(header: Text("Custom Certificates")) {
-                    if customCertificates.isEmpty {
-                        Text("No certificates added yet")
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach(customCertificates) { cert in
+            ScrollView {
+                LazyVStack(spacing: 20) {
+                    ForEach(customCertificates) { cert in
+                        VStack(alignment: .leading, spacing: 12) {
                             Text(cert.displayName)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
                         }
-                        .onDelete { indices in
-                            deleteCertificates(at: indices)
+                        .padding(20)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
+                        )
+                        .onTapGesture {
+                            if selectedCert == cert.folderName {
+                                selectedCert = nil
+                                UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+                            } else {
+                                selectedCert = cert.folderName
+                                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                            }
                         }
                     }
                 }
+                .padding()
             }
             .navigationTitle("Certificate App")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showAddCertificateSheet = true }) {
                         Image(systemName: "plus")
                     }
@@ -152,22 +168,24 @@ struct CertificateView: View {
             }
             .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
+                // Re-check selected after reload
+                if let sel = selectedCert, !customCertificates.contains(where: { $0.folderName == sel }) {
+                    selectedCert = nil
+                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+                }
             }) {
                 AddCertificateView()
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
             }
             .onAppear {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
+                selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
+                if let sel = selectedCert, !customCertificates.contains(where: { $0.folderName == sel }) {
+                    selectedCert = nil
+                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+                }
             }
         }
-    }
-    
-    private func deleteCertificates(at indices: IndexSet) {
-        for index in indices {
-            let cert = customCertificates[index]
-            try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
-        }
-        customCertificates = CertificateFileManager.shared.loadCertificates()
     }
 }
 
@@ -233,14 +251,14 @@ struct AddCertificateView: View {
             .navigationTitle("New Certificate")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("X") {
                         dismiss()
                     }
                     .disabled(isChecking)
                 }
                 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     if isChecking {
                         ProgressView()
                     } else {
@@ -275,6 +293,17 @@ struct AddCertificateView: View {
         
         DispatchQueue.global(qos: .userInitiated).async {
             do {
+                // Access security-scoped resources
+                guard p12URL.startAccessingSecurityScopedResource() else {
+                    throw NSError(domain: "AccessError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot access P12 file"])
+                }
+                defer { p12URL.stopAccessingSecurityScopedResource() }
+                
+                guard provURL.startAccessingSecurityScopedResource() else {
+                    throw NSError(domain: "AccessError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot access Provision file"])
+                }
+                defer { provURL.stopAccessingSecurityScopedResource() }
+                
                 let p12Data = try Data(contentsOf: p12URL)
                 let provData = try Data(contentsOf: provURL)
                 
