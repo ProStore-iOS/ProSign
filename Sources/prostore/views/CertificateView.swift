@@ -2,6 +2,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// Centralized types to avoid redeclaration
+struct CertificateFileItem {
+    var name: String = ""
+    var url: URL?
+}
+
 struct CustomCertificate: Identifiable {
     let id = UUID()
     let name: String
@@ -98,15 +104,11 @@ struct AddCertificateView: View {
     @Binding var customCertificates: [CustomCertificate]
     @Environment(\.dismiss) private var dismiss
     
-    @State private var p12File: FileItem?
-    @State private var provFile: FileItem?
+    @State private var p12File: CertificateFileItem?
+    @State private var provFile: CertificateFileItem?
     @State private var password = ""
     
-    enum ActiveSheet: Identifiable {
-        case p12, prov
-        var id: Int { hashValue }
-    }
-    @State private var activeSheet: ActiveSheet?
+    @State private var activeSheet: CertificatePickerKind?
     
     var body: some View {
         NavigationView {
@@ -161,11 +163,11 @@ struct AddCertificateView: View {
                 }
             }
             .sheet(item: $activeSheet) { sheetType in
-                DocumentPicker(kind: sheetType == .p12 ? .p12 : .prov) { url in
+                CertificateDocumentPicker(kind: sheetType) { url in
                     if sheetType == .p12 {
-                        p12File = FileItem(name: url.lastPathComponent, url: url)
+                        p12File = CertificateFileItem(name: url.lastPathComponent, url: url)
                     } else {
-                        provFile = FileItem(name: url.lastPathComponent, url: url)
+                        provFile = CertificateFileItem(name: url.lastPathComponent, url: url)
                     }
                 }
             }
@@ -193,57 +195,6 @@ struct AddCertificateView: View {
             dismiss()
         } catch {
             print("Error reading files: \(error)")
-        }
-    }
-}
-
-struct FileItem {
-    var name: String = ""
-    var url: URL?
-}
-
-enum PickerKind: Identifiable {
-    case p12, prov, ipa
-    var id: Int { hashValue }
-}
-
-struct DocumentPicker: UIViewControllerRepresentable {
-    let kind: PickerKind
-    let onPick: (URL) -> Void
-    
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let supportedTypes: [UTType]
-        
-        switch kind {
-        case .p12:
-            supportedTypes = [UTType(filenameExtension: "p12")!]
-        case .prov:
-            supportedTypes = [UTType(filenameExtension: "mobileprovision")!]
-        case .ipa:
-            supportedTypes = [UTType(filenameExtension: "ipa")!]
-        }
-        
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: true)
-        picker.delegate = context.coordinator
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPick: onPick)
-    }
-    
-    class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let onPick: (URL) -> Void
-        
-        init(onPick: @escaping (URL) -> Void) {
-            self.onPick = onPick
-        }
-        
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            guard let url = urls.first else { return }
-            onPick(url)
         }
     }
 }

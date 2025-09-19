@@ -30,6 +30,45 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 }
 
+struct CertificateDocumentPicker: UIViewControllerRepresentable {
+    let kind: CertificatePickerKind
+    let onPick: (URL) -> Void
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let supportedTypes: [UTType]
+        
+        switch kind {
+        case .p12:
+            supportedTypes = [UTType(filenameExtension: "p12")!]
+        case .prov:
+            supportedTypes = [UTType(filenameExtension: "mobileprovision")!]
+        }
+        
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: true)
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        
+        init(onPick: @escaping (URL) -> Void) {
+            self.onPick = onPick
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
+        }
+    }
+}
+
 // MARK: - ActivityView
 
 struct ActivityView: UIViewControllerRepresentable {
@@ -51,6 +90,17 @@ enum PickerKind: Identifiable {
         case .ipa: return 0
         case .p12: return 1
         case .prov: return 2
+        }
+    }
+}
+
+enum CertificatePickerKind: Identifiable {
+    case p12, prov
+    
+    var id: Int {
+        switch self {
+        case .p12: return 0
+        case .prov: return 1
         }
     }
 }
