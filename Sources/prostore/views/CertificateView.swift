@@ -196,9 +196,13 @@ struct CertificateView: View {
                                     .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
                             )
                             .onTapGesture {
-                                if selectedCert == cert.folderName {
-                                    selectedCert = nil
-                                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+                                // Only allow deselection if there are other certificates available
+                                if selectedCert == cert.folderName && customCertificates.count > 1 {
+                                    // Find another certificate to select
+                                    if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
+                                        selectedCert = nextCert.folderName
+                                        UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                                    }
                                 } else {
                                     selectedCert = cert.folderName
                                     UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
@@ -221,16 +225,20 @@ struct CertificateView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    certToDelete = cert
-                                    showingDeleteAlert = true
+                                    // Prevent deletion if it's the only certificate
+                                    if customCertificates.count > 1 {
+                                        certToDelete = cert
+                                        showingDeleteAlert = true
+                                    }
                                 }) {
                                     Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                                        .foregroundColor(customCertificates.count > 1 ? .red : .gray)
                                         .font(.caption)
                                         .padding(8)
                                         .background(Color.white.opacity(0.8))
                                         .clipShape(Circle())
                                 }
+                                .disabled(customCertificates.count <= 1)
                             }
                             .padding(.top, 12)
                             .padding(.horizontal, 12)
@@ -254,11 +262,8 @@ struct CertificateView: View {
             .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
                 editingFolder = nil
-                // Re-check selected after reload
-                if let sel = selectedCert, !customCertificates.contains(where: { $0.folderName == sel }) {
-                    selectedCert = nil
-                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
-                }
+                // Ensure at least one certificate is selected
+                ensureSelection()
             }) {
                 AddCertificateView(editingFolder: editingFolder)
                     .presentationDetents([.large])
@@ -276,10 +281,19 @@ struct CertificateView: View {
             .onAppear {
                 customCertificates = CertificateFileManager.shared.loadCertificates()
                 selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
-                if let sel = selectedCert, !customCertificates.contains(where: { $0.folderName == sel }) {
-                    selectedCert = nil
-                    UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
-                }
+                
+                // Ensure at least one certificate is selected
+                ensureSelection()
+            }
+        }
+    }
+    
+    private func ensureSelection() {
+        // If no certificate is selected or the selected one doesn't exist, select the first one
+        if selectedCert == nil || !customCertificates.contains(where: { $0.folderName == selectedCert }) {
+            if let firstCert = customCertificates.first {
+                selectedCert = firstCert.folderName
+                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
             }
         }
     }
@@ -287,10 +301,20 @@ struct CertificateView: View {
     private func deleteCertificate(_ cert: CustomCertificate) {
         try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
         customCertificates = CertificateFileManager.shared.loadCertificates()
+        
+        // If we're deleting the currently selected certificate, select another one
         if selectedCert == cert.folderName {
-            selectedCert = nil
-            UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+            if let newSelection = customCertificates.first {
+                selectedCert = newSelection.folderName
+                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+            } else {
+                selectedCert = nil
+                UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
+            }
         }
+        
+        // Ensure selection is maintained
+        ensureSelection()
     }
 }
 
