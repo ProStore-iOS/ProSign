@@ -32,28 +32,25 @@ class CertificateFileManager {
     }
     
     func loadCertificates() -> [CustomCertificate] {
-        guard let subdirectories = try? fileManager.contentsOfDirectory(at: certificatesDirectory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
+        var resultCerts: [CustomCertificate] = []
+        guard let folders = try? fileManager.contentsOfDirectory(at: certificatesDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else {
             return []
         }
         
-        var certificates: [CustomCertificate] = []
-        for folder in subdirectories {
-            var isDir: ObjCBool = false
-            if fileManager.fileExists(atPath: folder.path, isDirectory: &isDir), !isDir.boolValue { continue }
-            
+        for folder in folders {
             let nameURL = folder.appendingPathComponent("name.txt")
             if fileManager.fileExists(atPath: nameURL.path) {
-                do {
-                    let nameData = try Data(contentsOf: nameURL)
-                    if let displayName = String(data: nameData, encoding: .utf8) {
-                        certificates.append(CustomCertificate(displayName: displayName, folderName: folder.lastPathComponent))
-                    }
-                } catch {
-                    print("Error loading name: \(error)")
+                if let nameData = try? Data(contentsOf: nameURL),
+                   let nameString = String(data: nameData, encoding: .utf8) {
+                    resultCerts.append(CustomCertificate(displayName: nameString, folderName: folder.lastPathComponent))
                 }
+            } else {
+                // Fallback display name if missing
+                resultCerts.append(CustomCertificate(displayName: folder.lastPathComponent, folderName: folder.lastPathComponent))
             }
         }
-        return certificates.sorted { $0.displayName < $1.displayName }
+        
+        return resultCerts
     }
     
     func saveCertificate(p12Data: Data, provData: Data, password: String, displayName: String) throws -> String {
@@ -68,7 +65,6 @@ class CertificateFileManager {
             let p12URL = folder.appendingPathComponent("certificate.p12")
             let provURL = folder.appendingPathComponent("profile.mobileprovision")
             let passwordURL = folder.appendingPathComponent("password.txt")
-            
             if fileManager.fileExists(atPath: p12URL.path) && fileManager.fileExists(atPath: provURL.path) && fileManager.fileExists(atPath: passwordURL.path) {
                 do {
                     let existingP12Data = try Data(contentsOf: p12URL)
@@ -90,44 +86,37 @@ class CertificateFileManager {
             }
         }
         
-        // Find unique folder name
-        var candidate = baseName
-        var count = 1
-        while fileManager.fileExists(atPath: certificatesDirectory.appendingPathComponent(candidate).path) {
-            candidate = "\(baseName) (\(count))"
-            count += 1
+        // Create folder
+        var finalName = baseName
+        var counter = 1
+        var folderURL = certificatesDirectory.appendingPathComponent(finalName)
+        while fileManager.fileExists(atPath: folderURL.path) {
+            counter += 1
+            finalName = "\(baseName)-\(counter)"
+            folderURL = certificatesDirectory.appendingPathComponent(finalName)
         }
+        try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
         
-        let certificateFolder = certificatesDirectory.appendingPathComponent(candidate)
-        try fileManager.createDirectory(at: certificateFolder, withIntermediateDirectories: true)
+        try p12Data.write(to: folderURL.appendingPathComponent("certificate.p12"))
+        try provData.write(to: folderURL.appendingPathComponent("profile.mobileprovision"))
+        try password.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("password.txt"))
+        try displayName.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("name.txt"))
         
-        try p12Data.write(to: certificateFolder.appendingPathComponent("certificate.p12"))
-        try provData.write(to: certificateFolder.appendingPathComponent("profile.mobileprovision"))
-        try password.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("password.txt"))
-        try displayName.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("name.txt"))
-        
-        return candidate
+        return finalName
     }
     
     func updateCertificate(folderName: String, p12Data: Data, provData: Data, password: String, displayName: String) throws {
         let certificateFolder = certificatesDirectory.appendingPathComponent(folderName)
-        guard fileManager.fileExists(atPath: certificateFolder.path) else {
-            throw NSError(domain: "CertificateFileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Certificate folder not found"])
-        }
-        
         let p12HashNew = CertificatesManager.sha256Hex(p12Data)
         let provHashNew = CertificatesManager.sha256Hex(provData)
         let passwordHashNew = CertificatesManager.sha256Hex(password.data(using: .utf8) ?? Data())
         
-        // Check if new version identical to any other existing (exclude self)
+        // Prevent accidental duplicate update matching another cert
         let existingFolders = try fileManager.contentsOfDirectory(at: certificatesDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-        for folder in existingFolders {
-            if folder == certificateFolder { continue }
-            
+        for folder in existingFolders where folder.lastPathComponent != folderName {
             let p12URL = folder.appendingPathComponent("certificate.p12")
             let provURL = folder.appendingPathComponent("profile.mobileprovision")
             let passwordURL = folder.appendingPathComponent("password.txt")
-            
             if fileManager.fileExists(atPath: p12URL.path) && fileManager.fileExists(atPath: provURL.path) && fileManager.fileExists(atPath: passwordURL.path) {
                 do {
                     let existingP12Data = try Data(contentsOf: p12URL)
@@ -167,10 +156,11 @@ class CertificateFileManager {
     }
 }
 
+// MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
     @State private var showAddCertificateSheet = false
-    @State private var editingCertificate: CustomCertificate? = nil
+    @State private var editingCertificate: CustomCertificate? = nil   // Used only for edit sheet (.sheet(item:))
     @State private var selectedCert: String? = nil
     @State private var showingDeleteAlert = false
     @State private var certToDelete: CustomCertificate?
@@ -198,7 +188,6 @@ struct CertificateView: View {
                             .onTapGesture {
                                 // Only allow deselection if there are other certificates available
                                 if selectedCert == cert.folderName && customCertificates.count > 1 {
-                                    // Find another certificate to select
                                     if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
                                         selectedCert = nextCert.folderName
                                         UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
@@ -211,8 +200,8 @@ struct CertificateView: View {
                             
                             HStack {
                                 Button(action: {
+                                    // EDIT: trigger identifiable sheet
                                     editingCertificate = cert
-                                    showAddCertificateSheet = true
                                 }) {
                                     Image(systemName: "pencil")
                                         .foregroundColor(.blue)
@@ -225,7 +214,6 @@ struct CertificateView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    // Prevent deletion if it's the only certificate
                                     if customCertificates.count > 1 {
                                         certToDelete = cert
                                         showingDeleteAlert = true
@@ -252,26 +240,25 @@ struct CertificateView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        editingCertificate = nil
                         showAddCertificateSheet = true
                     }) {
                         Image(systemName: "plus")
                     }
                 }
             }
+            // ADD sheet (new certificate only)
             .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
-                customCertificates = CertificateFileManager.shared.loadCertificates()
-                editingCertificate = nil
-                // Ensure at least one certificate is selected
-                ensureSelection()
+                reloadCertificatesAndEnsureSelection()
             }) {
-                if let editingCertificate = editingCertificate {
-                    AddCertificateView(editingCertificate: editingCertificate)
-                        .presentationDetents([.large])
-                } else {
-                    AddCertificateView()
-                        .presentationDetents([.large])
-                }
+                AddCertificateView()
+                    .presentationDetents([.large])
+            }
+            // EDIT sheet (identifiable)
+            .sheet(item: $editingCertificate, onDismiss: {
+                reloadCertificatesAndEnsureSelection()
+            }) { editing in
+                AddCertificateView(editingCertificate: editing)
+                    .presentationDetents([.large])
             }
             .alert("Delete Certificate?", isPresented: $showingDeleteAlert) {
                 Button("Delete", role: .destructive) {
@@ -284,17 +271,18 @@ struct CertificateView: View {
                 Text("Are you sure? This can't be undone.")
             }
             .onAppear {
-                customCertificates = CertificateFileManager.shared.loadCertificates()
-                selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
-                
-                // Ensure at least one certificate is selected
-                ensureSelection()
+                reloadCertificatesAndEnsureSelection()
             }
         }
     }
     
+    private func reloadCertificatesAndEnsureSelection() {
+        customCertificates = CertificateFileManager.shared.loadCertificates()
+        selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
+        ensureSelection()
+    }
+    
     private func ensureSelection() {
-        // If no certificate is selected or the selected one doesn't exist, select the first one
         if selectedCert == nil || !customCertificates.contains(where: { $0.folderName == selectedCert }) {
             if let firstCert = customCertificates.first {
                 selectedCert = firstCert.folderName
@@ -307,7 +295,6 @@ struct CertificateView: View {
         try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
         customCertificates = CertificateFileManager.shared.loadCertificates()
         
-        // If we're deleting the currently selected certificate, select another one
         if selectedCert == cert.folderName {
             if let newSelection = customCertificates.first {
                 selectedCert = newSelection.folderName
@@ -317,12 +304,11 @@ struct CertificateView: View {
                 UserDefaults.standard.removeObject(forKey: "selectedCertificateFolder")
             }
         }
-        
-        // Ensure selection is maintained
         ensureSelection()
     }
 }
 
+// MARK: - Add / Edit View
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
     let editingCertificate: CustomCertificate?
@@ -333,6 +319,7 @@ struct AddCertificateView: View {
     @State private var activeSheet: CertificatePickerKind?
     @State private var isChecking = false
     @State private var errorMessage = ""
+    @State private var displayName: String = ""
     @State private var hasLoadedForEdit = false
     
     init(editingCertificate: CustomCertificate? = nil) {
@@ -372,6 +359,11 @@ struct AddCertificateView: View {
                         }
                     }
                     .disabled(isChecking)
+                }
+                
+                Section(header: Text("Display Name")) {
+                    TextField("Optional Display Name", text: $displayName)
+                        .disabled(isChecking)
                 }
                 
                 Section(header: Text("Password")) {
@@ -423,7 +415,6 @@ struct AddCertificateView: View {
                 errorMessage = ""
             }
             .onAppear {
-                // Load data for editing only once and only if we haven't already loaded it
                 if let cert = editingCertificate, !hasLoadedForEdit {
                     loadForEdit(cert: cert)
                     hasLoadedForEdit = true
@@ -437,12 +428,16 @@ struct AddCertificateView: View {
         let p12URL = certFolder.appendingPathComponent("certificate.p12")
         let provURL = certFolder.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certFolder.appendingPathComponent("password.txt")
+        let nameURL = certFolder.appendingPathComponent("name.txt")
         
         p12File = CertificateFileItem(name: "certificate.p12", url: p12URL)
         provFile = CertificateFileItem(name: "profile.mobileprovision", url: provURL)
         
         if let pwData = try? Data(contentsOf: passwordURL), let pw = String(data: pwData, encoding: .utf8) {
             password = pw
+        }
+        if let nameData = try? Data(contentsOf: nameURL), let nameStr = String(data: nameData, encoding: .utf8) {
+            displayName = nameStr
         }
     }
     
@@ -457,32 +452,30 @@ struct AddCertificateView: View {
                 var p12Data: Data
                 var provData: Data
                 if editingCertificate != nil {
-                    // For edit, files are in app container, no security scope needed
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 } else {
-                    // For new, access security-scoped
-                    guard p12URL.startAccessingSecurityScopedResource() else {
-                        throw NSError(domain: "AccessError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot access P12 file"])
+                    guard p12URL.startAccessingSecurityScopedResource(),
+                          provURL.startAccessingSecurityScopedResource() else {
+                        DispatchQueue.main.async {
+                            isChecking = false
+                            errorMessage = "Security-scoped resource access failed."
+                        }
+                        return
                     }
-                    defer { p12URL.stopAccessingSecurityScopedResource() }
-                    
-                    guard provURL.startAccessingSecurityScopedResource() else {
-                        throw NSError(domain: "AccessError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot access Provision file"])
+                    defer {
+                        p12URL.stopAccessingSecurityScopedResource()
+                        provURL.stopAccessingSecurityScopedResource()
                     }
-                    defer { provURL.stopAccessingSecurityScopedResource() }
-                    
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 }
                 
-                let result = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
-                
+                let checkResult = CustomCertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
                 var dispatchError: String?
-                switch result {
-                case .success(.success):
-                    let displayName = CertificatesManager.getCertificateName(p12Data: p12Data, password: password) ?? "Custom Certificate"
-                    
+                
+                switch checkResult {
+                case .success(.success(_, _)):
                     if let folder = editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
                     } else {
