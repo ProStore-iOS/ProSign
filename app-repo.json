@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.4.3",
+          "date": "2025-09-19T06:23:55+0000",
+          "localizedDescription": "What's new in Version 1.4.3?\n- Minor bug fixes\n- Update certificates view\n- Update project to v1.4.3",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.4.3/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3510241,
+          "sha256": "b1404a4fdc6d0eb2036ac5600cc8c4351e6d0c0a933611b19079877167866a8e",
+          "minOSVersion": "16.0",
+          "fullDate": "20250919062355"
+        },
+        {
           "version": "1.4.2",
           "date": "2025-09-18T07:56:46+0000",
           "localizedDescription": "What's new in Version 1.4.2?\n- Update to v1.4.2\n- Add better cert handling",
