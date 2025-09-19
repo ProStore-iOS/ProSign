@@ -9,9 +9,6 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
-    strategy:
-      matrix:
-        target: [device, simulator]
 
     steps:
       - name: Checkout Repo
@@ -95,134 +92,7 @@ jobs:
           echo "Resolving Swift package dependencies for prostore..."
           xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
 
-      # ===== DEVICE build branch (matrix.target == device) =====
-      - name: Build Device (archive + package unsigned .ipa)
-        if: matrix.target == 'device'
-        id: build_device
-        run: |
-          set -e
-          ARCHIVE_PATH="$PWD/build/prostore.xcarchive"
-          mkdir -p build
-
-          # Try to read cached objectVersion from file
-          CACHE_FILE=".object_version_cache"
-          CACHED_VERSION=""
-          candidates=(77 70 63 60 56 55)
-
-          if [ -f "$CACHE_FILE" ]; then
-            CACHED_VERSION=$(cat "$CACHE_FILE" | tr -d '\n')
-            echo "Found cached objectVersion: $CACHED_VERSION"
-
-            # Test the cached version first
-            echo "----- Testing cached objectVersion = $CACHED_VERSION -----"
-            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $CACHED_VERSION;/" -i.bak prostore.xcodeproj/project.pbxproj || true
-
-            set +e
-            xcodebuild clean archive \
-              -project prostore.xcodeproj \
-              -scheme prostore \
-              -archivePath "$ARCHIVE_PATH" \
-              -sdk iphoneos \
-              -configuration Release \
-              CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-            rc=$?
-            set -e
-
-            if [ $rc -eq 0 ]; then
-              echo "✅ Cached objectVersion $CACHED_VERSION works!"
-              echo "object_version=$CACHED_VERSION" >> $GITHUB_OUTPUT
-              echo "$CACHED_VERSION" > "$CACHE_FILE"
-            else
-              echo "❌ Cached objectVersion $CACHED_VERSION failed, trying other candidates..."
-            fi
-          fi
-
-          # If no cache or cached version failed, try all candidates
-          if [ -z "$CACHED_VERSION" ] || [ ! -f "$ARCHIVE_PATH" ]; then
-            build_ok=0
-            for v in "${candidates[@]}"; do
-              echo "----- Attempting build with objectVersion = $v -----"
-              /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $v;/" -i.bak prostore.xcodeproj/project.pbxproj || true
-              echo "Applied objectVersion $v. Header preview:"
-              sed -n '1,20p' prostore.xcodeproj/project.pbxproj || true
-              echo "Running xcodebuild archive..."
-              set +e
-              xcodebuild clean archive \
-                -project prostore.xcodeproj \
-                -scheme prostore \
-                -archivePath "$ARCHIVE_PATH" \
-                -sdk iphoneos \
-                -configuration Release \
-                CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-              rc=$?
-              set -e
-              if [ $rc -eq 0 ]; then
-                echo "✅ xcodebuild succeeded with objectVersion = $v"
-                echo "object_version=$v" >> $GITHUB_OUTPUT
-                echo "$v" > "$CACHE_FILE"
-                echo "Cached successful objectVersion: $v"
-                build_ok=1
-                break
-              else
-                echo "❌ xcodebuild failed (exit $rc). Trying next objectVersion..."
-              fi
-            done
-
-            if [ "${build_ok:-0}" -ne 1 ] && [ ! -d "$ARCHIVE_PATH" ]; then
-              echo "ERROR: All objectVersion attempts failed. Dumping debug info:"
-              echo "===== project.pbxproj header ====="
-              sed -n '1,200p' prostore.xcodeproj/project.pbxproj || true
-              echo "===== build directory listing ====="
-              ls -la build || true
-              exit 74
-            fi
-          fi
-
-          # Package Device .ipa (unsigned)
-          APP_PATH="$ARCHIVE_PATH/Products/Applications/prostore.app"
-          OUTPUT_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
-          echo "Device app path: $APP_PATH"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "ERROR: App not found at expected path. Attempting fallback packaging from archive contents..."
-            ls -la "$ARCHIVE_PATH" || true
-            # attempt to find .app anywhere in archive
-            FOUND_APP=$(find "$ARCHIVE_PATH" -name "*.app" -type d | head -n1 || true)
-            if [ -n "$FOUND_APP" ]; then
-              APP_PATH="$FOUND_APP"
-            else
-              echo "No .app found — failing device package step."
-              exit 1
-            fi
-          fi
-
-          mkdir -p build/Payload
-          rm -rf build/Payload/* || true
-          cp -R "$APP_PATH" build/Payload/
-          (cd build && zip -r "$(basename "$OUTPUT_IPA")" Payload) || exit 1
-          echo "Created device ipa: $OUTPUT_IPA"
-          ls -la "$OUTPUT_IPA" || true
-
-      - name: Set device artifact path output
-        if: matrix.target == 'device'
-        id: set_device_art
-        run: |
-          IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
-          if [ -f "$IPA" ]; then
-            echo "ipa_path=$IPA" >> $GITHUB_OUTPUT
-          else
-            echo "ipa_path=" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload Device IPA artifact
-        if: matrix.target == 'device' && steps.set_device_art.outputs.ipa_path != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: com.prostoreios.prostore-unsigned-ios.ipa
-          path: ${{ steps.set_device_art.outputs.ipa_path }}
-
-      # ===== SIMULATOR build branch (matrix.target == simulator) =====
       - name: Build simulator (iphonesimulator) and package simulator .ipa (if possible)
-        if: matrix.target == 'simulator'
         id: build_sim
         run: |
           set -e
@@ -275,7 +145,6 @@ jobs:
           ls -la "$SIM_IPA" || true
 
       - name: Set simulator artifact path output
-        if: matrix.target == 'simulator'
         id: set_sim_art
         run: |
           IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
@@ -286,7 +155,7 @@ jobs:
           fi
 
       - name: Upload Simulator IPA artifact
-        if: matrix.target == 'simulator' && steps.set_sim_art.outputs.ipa_path != ''
+        if: steps.set_sim_art.outputs.ipa_path != ''
         uses: actions/upload-artifact@v4
         with:
           name: com.prostoreios.prostore-unsigned-iossimulator.ipa
