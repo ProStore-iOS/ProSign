@@ -475,7 +475,7 @@ struct AddCertificateView: View {
                 var dispatchError: String?
                 
                 switch checkResult {
-                case .success(.success(_, _)):
+                case .success(let value1, let value2):
                     if let folder = editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
                     } else {
