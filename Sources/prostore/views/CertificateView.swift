@@ -447,7 +447,7 @@ struct AddCertificateView: View {
         isChecking = true
         errorMessage = ""
         
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async(execute: {
             do {
                 var p12Data: Data
                 var provData: Data
@@ -503,6 +503,6 @@ struct AddCertificateView: View {
                     errorMessage = "Failed to read files or save: \(error.localizedDescription)"
                 }
             }
-        }
+        })
     }
 }
