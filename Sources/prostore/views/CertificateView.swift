@@ -471,7 +471,7 @@ struct AddCertificateView: View {
                     provData = try Data(contentsOf: provURL)
                 }
                 
-                let checkResult = CustomCertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
+                let checkResult = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
                 var dispatchError: String?
                 
                 switch checkResult {
