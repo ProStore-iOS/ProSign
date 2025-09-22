@@ -198,7 +198,7 @@ struct CertificateView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
+            ScrollView {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                     ForEach(customCertificates) { cert in
                         ZStack(alignment: .top) {
@@ -210,6 +210,7 @@ struct CertificateView: View {
                             }
                             .padding(20)
                             .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray6))
                             .cornerRadius(16)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
@@ -237,7 +238,7 @@ struct CertificateView: View {
                                         .foregroundColor(.blue)
                                         .font(.caption)
                                         .padding(8)
-                                        .background(Color(.systemGray6).opacity(0.8))
+                                        .background(Color.white.opacity(0.8))
                                         .clipShape(Circle())
                                 }
                                 
@@ -253,7 +254,7 @@ struct CertificateView: View {
                                         .foregroundColor(customCertificates.count > 1 ? .red : .gray)
                                         .font(.caption)
                                         .padding(8)
-                                        .background(Color(.systemGray6).opacity(0.8))
+                                        .background(Color.white.opacity(0.8))
                                         .clipShape(Circle())
                                 }
                                 .disabled(customCertificates.count <= 1)
@@ -265,7 +266,6 @@ struct CertificateView: View {
                 }
                 .padding()
             }
-            .scrollContentBackground(.hidden)
             .background(Color(.systemGray6))
             .navigationTitle("Certificate App")
             .navigationBarTitleDisplayMode(.inline)
