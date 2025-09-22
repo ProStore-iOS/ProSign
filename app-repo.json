@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.6.2",
+          "date": "2025-09-22T07:20:10+0000",
+          "localizedDescription": "What's new in Version 1.6.2?\n- Can't be bothered to write a commit message",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.6.2/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3535894,
+          "sha256": "779a80b8ae0cd677a833553933ad5da04d9473dc37b79887a6cbc1d7049d762e",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922072010"
+        },
+        {
           "version": "1.6.1",
           "date": "2025-09-22T07:05:48+0000",
           "localizedDescription": "What's new in Version 1.6.1?\n- Fix colour stuff",
