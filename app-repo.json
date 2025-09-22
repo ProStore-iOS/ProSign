@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.6.0",
+          "date": "2025-09-22T06:57:38+0000",
+          "localizedDescription": "What's new in Version 1.6.0?\n- Update to v1.6.0\n- Add duplicate name check logic",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.6.0/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3534583,
+          "sha256": "50c55d3708c8b9dc64ce1712145fbf17d9f03bec11dcaff0b8b3855ae6f89c29",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922065738"
+        },
+        {
           "version": "1.5.4",
           "date": "2025-09-22T06:43:50+0000",
           "localizedDescription": "What's new in Version 1.5.4?\n- Update to v1.5.4\n- Add back cert name generator",
