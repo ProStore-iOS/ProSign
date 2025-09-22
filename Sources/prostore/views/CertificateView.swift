@@ -443,43 +443,38 @@ struct AddCertificateView: View {
     
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
-    
+        
         isChecking = true
         errorMessage = ""
-    
+        
         let workItem: DispatchWorkItem = DispatchWorkItem {
             do {
                 var p12Data: Data
                 var provData: Data
-                if editingCertificate != nil {
+                if self.editingCertificate != nil {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 } else {
-                    guard p12URL.startAccessingSecurityScopedResource(),
-                        provURL.startAccessingSecurityScopedResource() else {
-                        DispatchQueue.main.async {
-                            isChecking = false
-                            errorMessage = "Security-scoped resource access failed."
-                        }
-                        return
-                    }
+                    // Call start, but don't guard—proceed to read anyway
+                    let p12Scoped = p12URL.startAccessingSecurityScopedResource()
+                    let provScoped = provURL.startAccessingSecurityScopedResource()
                     defer {
-                        p12URL.stopAccessingSecurityScopedResource()
-                        provURL.stopAccessingSecurityScopedResource()
+                        if p12Scoped { p12URL.stopAccessingSecurityScopedResource() }
+                        if provScoped { provURL.stopAccessingSecurityScopedResource() }
                     }
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 }
-            
-                let checkResult = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
+                
+                let checkResult = CertificatesManager.check(p12Data: p12Data, password: self.password, mobileProvisionData: provData)
                 var dispatchError: String?
-            
+                
                 switch checkResult {
                 case .success(.success):
-                    if let folder = editingCertificate?.folderName {
-                        try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
+                    if let folder = self.editingCertificate?.folderName {
+                        try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: self.password, displayName: self.displayName)
                     } else {
-                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: password, displayName: displayName)
+                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: self.password, displayName: self.displayName)
                     }
                 case .success(.incorrectPassword):
                     dispatchError = "Incorrect Password"
@@ -488,19 +483,19 @@ struct AddCertificateView: View {
                 case .failure(let error):
                     dispatchError = "Error: \(error.localizedDescription)"
                 }
-            
+                
                 DispatchQueue.main.async {
-                    isChecking = false
+                    self.isChecking = false
                     if let err = dispatchError {
-                        errorMessage = err
+                        self.errorMessage = err
                     } else {
-                        dismiss()
+                        self.dismiss()
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
-                    isChecking = false
-                    errorMessage = "Failed to read files or save: \(error.localizedDescription)"
+                    self.isChecking = false
+                    self.errorMessage = "Failed to read files or save: \(error.localizedDescription)"
                 }
             }
         }

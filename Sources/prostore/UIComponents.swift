@@ -35,16 +35,14 @@ struct CertificateDocumentPicker: UIViewControllerRepresentable {
     let onPick: (URL) -> Void
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let supportedTypes: [UTType]
-        
+        let types: [UTType]
         switch kind {
         case .p12:
-            supportedTypes = [UTType(filenameExtension: "p12")!]
+            types = [.pkcs12]
         case .prov:
-            supportedTypes = [UTType(filenameExtension: "mobileprovision")!]
+            types = [UTType(filenameExtension: "mobileprovision")!]  // Custom UTType for .mobileprovision
         }
-        
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: true)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)  // Import mode: copies file, no scope needed
         picker.delegate = context.coordinator
         return picker
     }
@@ -57,14 +55,13 @@ struct CertificateDocumentPicker: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, UIDocumentPickerDelegate {
         let onPick: (URL) -> Void
-        
         init(onPick: @escaping (URL) -> Void) {
             self.onPick = onPick
         }
-        
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            guard let url = urls.first else { return }
-            onPick(url)
+            if let url = urls.first {
+                onPick(url)
+            }
         }
     }
 }
@@ -96,11 +93,5 @@ enum PickerKind: Identifiable {
 
 enum CertificatePickerKind: Identifiable {
     case p12, prov
-    
-    var id: Int {
-        switch self {
-        case .p12: return 0
-        case .prov: return 1
-        }
-    }
+    var id: Self { self }
 }
