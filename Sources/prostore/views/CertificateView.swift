@@ -265,6 +265,8 @@ struct CertificateView: View {
                 }
                 .padding()
             }
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGray6))
             .navigationTitle("Certificate App")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
