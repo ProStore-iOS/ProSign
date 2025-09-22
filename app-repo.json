@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.5.4",
+          "date": "2025-09-22T06:43:50+0000",
+          "localizedDescription": "What's new in Version 1.5.4?\n- Update to v1.5.4\n- Add back cert name generator",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.5.4/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3532894,
+          "sha256": "7d156936d18c49a1241da89753f71abd356b6cb7b4e27d8ecccc4a1ffc0d3db0",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922064350"
+        },
+        {
           "version": "1.5.3",
           "date": "2025-09-22T06:33:24+0000",
           "localizedDescription": "What's new in Version 1.5.3?\n- Update to v1.5.3\n- Rename CustomCertificatesManager to CertificatesManager\n- Bug fixes\n- More changes\n- Fix enum pattern match for success case in CertificateView.swift\n- Resolve DispatchWorkItem type ambiguity and switch case for certificate check result\n- Fix bug",
