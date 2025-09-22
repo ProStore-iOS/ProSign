@@ -5,6 +5,7 @@
       "name": "ProStore Developer",
       "version": "1.6.3d2",
       "bundleIdentifier": "com.prostoreios.prostore",
+      "developerName": "ProStore iOS",
       "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/developer/com.prostoreios.prostore-developer-unsigned-ios.ipa"
     }
   ]
