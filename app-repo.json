@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.5.2",
+          "date": "2025-09-22T06:19:07+0000",
+          "localizedDescription": "What's new in Version 1.5.2?\n- Resolve DispatchWorkItem type ambiguity and switch case for certificate check result\n- Refactor SigningManager: modernize API, replace spin-wait with semaphore, silence warnings\n- Attempt to fix bug\n- Update to v1.5.2\n- Rename CustomCertificatesManager to CertificatesManager\n- Bug fixes\n- More changes\n- Fix enum pattern match for success case in CertificateView.swift",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.5.2/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3533068,
+          "sha256": "0ed0da2df6361eae01c2628ec1702ecc9e96f981054a1f391a864d3ab9f759fd",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922061907"
+        },
+        {
           "version": "1.5.1",
           "date": "2025-09-19T23:02:56+0000",
           "localizedDescription": "What's new in Version 1.5.1?\n- Fix bug where prefilled certificate wouldn't load & Update to v1.5.1\n- Make certificatesDirectory public\n- Ensure one certificate is selected\n- Change order of names in AboutView",
