@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   build-unsigned-ipa:
+    name: Build IPA
     runs-on: macos-15
     timeout-minutes: 60
     outputs:
@@ -347,6 +348,7 @@ jobs:
         shell: bash
 
   create-github-release:
+    name: Create GitHub Release
     needs: build-unsigned-ipa
     if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
     runs-on: ubuntu-latest
@@ -388,6 +390,7 @@ jobs:
         shell: bash
 
   create-app-source-json:
+    name: Create or Update App Source JSON
     needs: build-unsigned-ipa
     if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
     runs-on: ubuntu-latest
@@ -566,5 +569,167 @@ jobs:
 
           git commit -m "Update apps.json from ProStore v${VERSION}"
           echo "Pushing apps.json to ${PAGES_REPO}:main"
+          git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
+        shell: bash
+
+  create-developer-update:
+    name: Create Developer Update
+    needs: build-unsigned-ipa
+    if: needs.build-unsigned-ipa.outputs.release_exists == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install jq and GitHub CLI
+        run: |
+          sudo apt update
+          # jq
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt install jq -y || true
+          fi
+          # gh
+          if ! command -v gh >/dev/null 2>&1; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update
+            sudo apt install gh -y || true
+          fi
+
+          echo "jq: $(jq --version 2>/dev/null || echo 'not installed')"
+          echo "gh: $(gh --version 2>/dev/null || echo 'not installed')"
+
+      - name: Download Device IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: com.prostoreios.prostore-unsigned-ios.ipa
+          path: build
+
+      - name: Handle Developer Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          DEVICE_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
+          DEV_IPA="build/com.prostoreios.prostore-developer-unsigned-ios.ipa"
+          mv "$DEVICE_IPA" "$DEV_IPA"
+
+          TAG="developer"
+          echo "Checking if release $TAG exists..."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Deleting existing $TAG release..."
+            gh release delete "$TAG" --yes
+          fi
+
+          echo "Creating new developer release..."
+          gh release create "$TAG" \
+            "$DEV_IPA" \
+            --prerelease \
+            --title "Developer Update" \
+            --notes "" \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Update Developer Repo JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build-unsigned-ipa.outputs.version }}
+        run: |
+          set -e
+          REPO_FILE="developer-repo.json"
+          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProStore/releases/download/developer/com.prostoreios.prostore-developer-unsigned-ios.ipa"
+
+          # Function to increment patch version
+          increment_patch() {
+            local version="$1"
+            IFS='.' read -r major minor patch <<< "$version"
+            patch=$((patch + 1))
+            echo "${major}.${minor}.${patch}"
+          }
+
+          BASE_DEV=$(increment_patch "$VERSION")
+
+          # Determine new dev version
+          NEW_D=1
+          if [ -f "$REPO_FILE" ]; then
+            CURRENT_DEV=$(jq -r '.apps[0].version // ""' "$REPO_FILE")
+            if [[ $CURRENT_DEV =~ ^([0-9]+\.[0-9]+\.[0-9]+)d([0-9]+)$ ]]; then
+              CURRENT_BASE="${BASH_REMATCH[1]}"
+              CURRENT_D="${BASH_REMATCH[2]}"
+              if [ "$CURRENT_BASE" == "$BASE_DEV" ]; then
+                NEW_D=$((CURRENT_D + 1))
+              fi
+            fi
+          fi
+
+          NEW_VERSION="${BASE_DEV}d${NEW_D}"
+
+          # Create or update JSON (always replace with single version)
+          jq -n \
+            --arg name "ProStore Developer Repo" \
+            --arg appname "ProStore Developer" \
+            --arg version "$NEW_VERSION" \
+            --arg url "$DOWNLOAD_URL" \
+            '{
+              "name": $name,
+              "apps": [
+                {
+                  "name": $appname,
+                  "version": $version,
+                  "downloadURL": $url
+                }
+              ]
+            }' > "$REPO_FILE"
+
+          # Safe commit & push
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "$REPO_FILE"
+          git commit -m "Update ProStore developer repo to $NEW_VERSION" || echo "No changes to commit"
+
+          git fetch origin main --quiet
+          if git rev-parse --verify origin/main >/dev/null 2>&1; then
+            if git rebase origin/main; then
+              echo "Rebase succeeded, pushing changes..."
+              git push origin HEAD:main
+            else
+              echo "Rebase failed — aborting rebase and skipping push."
+              git rebase --abort || true
+            fi
+          else
+            git push origin HEAD:main
+          fi
+
+      - name: Push Developer JSON to GitHub Pages
+        env:
+          PAGES_PAT: ${{ secrets.PAGES_PAT }}
+        run: |
+          set -e
+          PAGES_REPO="ProStore-iOS/ProStore-iOS.github.io"
+          PAGES_DIR=$(mktemp -d)
+
+          echo "Cloning pages repo (masked token)..."
+          git clone --depth 1 "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" "$PAGES_DIR"
+
+          echo "Copying developer-repo.json -> developer.json in pages repo"
+          cp developer-repo.json "$PAGES_DIR/developer.json"
+
+          cd "$PAGES_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only commit if there's a change
+          git add developer.json
+          if git diff --quiet --cached; then
+            echo "No changes to developer.json — nothing to commit/push."
+            exit 0
+          fi
+
+          git commit -m "Update developer.json from ProStore developer build"
+          echo "Pushing developer.json to ${PAGES_REPO}:main"
           git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
         shell: bash
