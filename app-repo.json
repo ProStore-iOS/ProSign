@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.5.3",
+          "date": "2025-09-22T06:33:24+0000",
+          "localizedDescription": "What's new in Version 1.5.3?\n- Update to v1.5.3\n- Rename CustomCertificatesManager to CertificatesManager\n- Bug fixes\n- More changes\n- Fix enum pattern match for success case in CertificateView.swift\n- Resolve DispatchWorkItem type ambiguity and switch case for certificate check result\n- Fix bug",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.5.3/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3532037,
+          "sha256": "60a1dccd36a662ffad6d1f4407eb0d6c957d3c4baed73d38dea2b976ac1ed3ab",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922063324"
+        },
+        {
           "version": "1.5.2",
           "date": "2025-09-22T06:19:07+0000",
           "localizedDescription": "What's new in Version 1.5.2?\n- Resolve DispatchWorkItem type ambiguity and switch case for certificate check result\n- Refactor SigningManager: modernize API, replace spin-wait with semaphore, silence warnings\n- Attempt to fix bug\n- Update to v1.5.2\n- Rename CustomCertificatesManager to CertificatesManager\n- Bug fixes\n- More changes\n- Fix enum pattern match for success case in CertificateView.swift",
