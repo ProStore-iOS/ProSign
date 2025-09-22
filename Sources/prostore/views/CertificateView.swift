@@ -451,6 +451,7 @@ struct AddCertificateView: View {
             do {
                 var p12Data: Data
                 var provData: Data
+                var localDisplayName = self.displayName  // Local copy to modify if needed
                 if self.editingCertificate != nil {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
@@ -471,10 +472,15 @@ struct AddCertificateView: View {
                 
                 switch checkResult {
                 case .success(.success):
+                    // Generate displayName from cert if not set
+                    if localDisplayName.isEmpty {
+                        localDisplayName = CertificatesManager.getCertificateName(p12Data: p12Data, password: self.password) ?? "Custom Certificate"
+                    }
+                    
                     if let folder = self.editingCertificate?.folderName {
-                        try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: self.password, displayName: self.displayName)
+                        try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
                     } else {
-                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: self.password, displayName: self.displayName)
+                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
                     }
                 case .success(.incorrectPassword):
                     dispatchError = "Incorrect Password"
