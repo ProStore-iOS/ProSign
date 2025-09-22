@@ -26,6 +26,16 @@
       ],
       "versions": [
         {
+          "version": "1.6.1",
+          "date": "2025-09-22T07:05:48+0000",
+          "localizedDescription": "What's new in Version 1.6.1?\n- Fix colour stuff",
+          "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/v1.6.1/com.prostoreios.prostore-unsigned-ios.ipa",
+          "size": 3535421,
+          "sha256": "7d089353a20a8f7ae612aa6971b4014979ca942efd800010e6e1c9155bfcd85c",
+          "minOSVersion": "16.0",
+          "fullDate": "20250922070548"
+        },
+        {
           "version": "1.6.0",
           "date": "2025-09-22T06:57:38+0000",
           "localizedDescription": "What's new in Version 1.6.0?\n- Update to v1.6.0\n- Add duplicate name check logic",
