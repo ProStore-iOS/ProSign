@@ -443,11 +443,11 @@ struct AddCertificateView: View {
     
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
-        
+    
         isChecking = true
         errorMessage = ""
-        
-        let workItem = DispatchWorkItem {
+    
+        let workItem: DispatchWorkItem = DispatchWorkItem {
             do {
                 var p12Data: Data
                 var provData: Data
@@ -456,7 +456,7 @@ struct AddCertificateView: View {
                     provData = try Data(contentsOf: provURL)
                 } else {
                     guard p12URL.startAccessingSecurityScopedResource(),
-                          provURL.startAccessingSecurityScopedResource() else {
+                        provURL.startAccessingSecurityScopedResource() else {
                         DispatchQueue.main.async {
                             isChecking = false
                             errorMessage = "Security-scoped resource access failed."
@@ -470,12 +470,12 @@ struct AddCertificateView: View {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 }
-                
+            
                 let checkResult = CertificatesManager.check(p12Data: p12Data, password: password, mobileProvisionData: provData)
                 var dispatchError: String?
-                
+            
                 switch checkResult {
-                case .success(let value1, let value2):
+                case .success(.success):
                     if let folder = editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: password, displayName: displayName)
                     } else {
@@ -488,7 +488,7 @@ struct AddCertificateView: View {
                 case .failure(let error):
                     dispatchError = "Error: \(error.localizedDescription)"
                 }
-                
+            
                 DispatchQueue.main.async {
                     isChecking = false
                     if let err = dispatchError {
