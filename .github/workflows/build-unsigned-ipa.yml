@@ -672,6 +672,7 @@ jobs:
           jq -n \
             --arg name "ProStore Developer Repo" \
             --arg appname "ProStore Developer" \
+            --arg bundleIdentifier "com.prostoreios.prostore" \
             --arg version "$NEW_VERSION" \
             --arg url "$DOWNLOAD_URL" \
             '{
@@ -680,6 +681,7 @@ jobs:
                 {
                   "name": $appname,
                   "version": $version,
+                  "bundleIdentifier": $bundleIdentifier,
                   "downloadURL": $url
                 }
               ]
