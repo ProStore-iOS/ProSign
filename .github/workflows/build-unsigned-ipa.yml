@@ -674,6 +674,7 @@ jobs:
             --arg appname "ProStore Developer" \
             --arg devname "ProStore iOS" \
             --arg bundleIdentifier "com.prostoreios.prostore" \
+            --arg description "The developer pre-release version of ProStore!" \
             --arg version "$NEW_VERSION" \
             --arg url "$DOWNLOAD_URL" \
             '{
@@ -683,6 +684,7 @@ jobs:
                   "name": $appname,
                   "version": $version,
                   "developerName": $devname,
+                  "localizedDescription": $description,
                   "bundleIdentifier": $bundleIdentifier,
                   "downloadURL": $url
                 }
