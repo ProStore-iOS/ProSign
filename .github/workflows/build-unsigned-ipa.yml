@@ -390,7 +390,7 @@ jobs:
         shell: bash
 
   create-app-source-json:
-    name: Create or Update App Source JSON
+    name: Update App Source JSON
     needs: build-unsigned-ipa
     if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
     runs-on: ubuntu-latest
