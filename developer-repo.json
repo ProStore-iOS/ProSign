@@ -6,6 +6,7 @@
       "version": "1.6.3d3",
       "developerName": "ProStore iOS",
       "localizedDescription": "The developer pre-release version of ProStore!",
+      "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
       "bundleIdentifier": "com.prostoreios.prostore",
       "downloadURL": "https://github.com/ProStore-iOS/ProStore/releases/download/developer/com.prostoreios.prostore-developer-unsigned-ios.ipa"
     }

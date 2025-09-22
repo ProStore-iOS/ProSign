@@ -675,6 +675,7 @@ jobs:
             --arg devname "ProStore iOS" \
             --arg bundleIdentifier "com.prostoreios.prostore" \
             --arg description "The developer pre-release version of ProStore!" \
+            --arg iconURL "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" \
             --arg version "$NEW_VERSION" \
             --arg url "$DOWNLOAD_URL" \
             '{
@@ -685,6 +686,7 @@ jobs:
                   "version": $version,
                   "developerName": $devname,
                   "localizedDescription": $description,
+                  "iconURL": $iconURL,
                   "bundleIdentifier": $bundleIdentifier,
                   "downloadURL": $url
                 }
