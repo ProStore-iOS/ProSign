@@ -100,7 +100,8 @@ class CertificateFileManager {
         try p12Data.write(to: folderURL.appendingPathComponent("certificate.p12"))
         try provData.write(to: folderURL.appendingPathComponent("profile.mobileprovision"))
         try password.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("password.txt"))
-        try displayName.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("name.txt"))
+        let displayToWrite = uniqueDisplayName(displayName, excludingFolder: nil)
+        try displayToWrite.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("name.txt"))
         
         return finalName
     }
@@ -142,7 +143,8 @@ class CertificateFileManager {
         try p12Data.write(to: certificateFolder.appendingPathComponent("certificate.p12"))
         try provData.write(to: certificateFolder.appendingPathComponent("profile.mobileprovision"))
         try password.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("password.txt"))
-        try displayName.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("name.txt"))
+        let displayToWrite = uniqueDisplayName(displayName, excludingFolder: folderName)
+        try displayToWrite.data(using: .utf8)?.write(to: certificateFolder.appendingPathComponent("name.txt"))
     }
     
     func deleteCertificate(folderName: String) throws {
@@ -153,6 +155,35 @@ class CertificateFileManager {
     private func sanitizeFileName(_ name: String) -> String {
         let invalidChars = CharacterSet(charactersIn: ":/\\?%*|\"<>")
         return name.components(separatedBy: invalidChars).joined(separator: "_")
+    }
+
+    // Return a unique display name by appending " 2", " 3", ... if needed.
+    // `excludingFolder` lets updateCertificate keep the current folder's name out of the conflict check.
+    private func uniqueDisplayName(_ desired: String, excludingFolder: String? = nil) -> String {
+        let base = desired.isEmpty ? "Custom Certificate" : desired
+        var existingNames = Set<String>()
+        if let folders = try? fileManager.contentsOfDirectory(at: certificatesDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+            for folder in folders {
+                if folder.lastPathComponent == excludingFolder { continue }
+                let nameURL = folder.appendingPathComponent("name.txt")
+                if let data = try? Data(contentsOf: nameURL), let s = String(data: data, encoding: .utf8) {
+                    existingNames.insert(s)
+                } else {
+                    // fallback to folder name if name.txt missing
+                    existingNames.insert(folder.lastPathComponent)
+                }
+            }
+        }
+
+        if !existingNames.contains(base) {
+            return base
+        }
+
+        var counter = 2
+        while existingNames.contains("\(base) \(counter)") {
+            counter += 1
+        }
+        return "\(base) \(counter)"
     }
 }
 
@@ -440,7 +471,7 @@ struct AddCertificateView: View {
             displayName = nameStr
         }
     }
-    
+
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
         
