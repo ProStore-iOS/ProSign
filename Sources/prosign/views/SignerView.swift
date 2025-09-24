@@ -124,7 +124,7 @@ struct SignerView: View {
                     }
                 }
             }
-            .navigationTitle("ProStore Signer")
+            .navigationTitle("ProSign IPA Signer")
             .navigationBarTitleDisplayMode(.inline)
             .accentColor(.blue) // Custom accent color for the app
         }

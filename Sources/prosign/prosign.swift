@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ProStore: App {
+struct ProSign: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()

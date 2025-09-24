@@ -1,4 +1,4 @@
-name: ProStore iOS Build and Release
+name: ProSign iOS Build and Release
 
 on:
   workflow_dispatch:
@@ -96,21 +96,21 @@ jobs:
         run: |
           set -e
           xcodegen generate --spec project.yml
-          echo "Generated project at: $(pwd)/prostore.xcodeproj"
+          echo "Generated project at: $(pwd)/prosign.xcodeproj"
           echo "project.pbxproj header (first 60 lines):"
-          sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
+          sed -n '1,60p' prosign.xcodeproj/project.pbxproj || true
 
       - name: Resolve Swift Packages
         run: |
           set -e
-          echo "Resolving Swift package dependencies for prostore..."
-          xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
+          echo "Resolving Swift package dependencies for prosign..."
+          xcodebuild -resolvePackageDependencies -project prosign.xcodeproj -scheme prosign -configuration Release
 
       - name: Build IPA
         id: cache_object_version
         run: |
           set -e
-          ARCHIVE_PATH="$PWD/build/prostore.xcarchive"
+          ARCHIVE_PATH="$PWD/build/prosign.xcarchive"
           mkdir -p build
           
           # Try to read cached objectVersion from file
@@ -124,12 +124,12 @@ jobs:
             
             # Test the cached version first
             echo "----- Testing cached objectVersion = $CACHED_VERSION -----"
-            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $CACHED_VERSION;/" -i.bak prostore.xcodeproj/project.pbxproj || true
+            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $CACHED_VERSION;/" -i.bak prosign.xcodeproj/project.pbxproj || true
             
             set +e
             xcodebuild clean archive \
-              -project prostore.xcodeproj \
-              -scheme prostore \
+              -project prosign.xcodeproj \
+              -scheme prosign \
               -archivePath "$ARCHIVE_PATH" \
               -sdk iphoneos \
               -configuration Release \
@@ -151,14 +151,14 @@ jobs:
           build_ok=0
           for v in "${candidates[@]}"; do
             echo "----- Attempting build with objectVersion = $v -----"
-            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $v;/" -i.bak prostore.xcodeproj/project.pbxproj || true
+            /usr/bin/perl -0777 -pe "s/objectVersion = \\d+;/objectVersion = $v;/" -i.bak prosign.xcodeproj/project.pbxproj || true
             echo "Applied objectVersion $v. Header preview:"
-            sed -n '1,20p' prostore.xcodeproj/project.pbxproj || true
+            sed -n '1,20p' prosign.xcodeproj/project.pbxproj || true
             echo "Running xcodebuild archive..."
             set +e
             xcodebuild clean archive \
-              -project prostore.xcodeproj \
-              -scheme prostore \
+              -project prosign.xcodeproj \
+              -scheme prosign \
               -archivePath "$ARCHIVE_PATH" \
               -sdk iphoneos \
               -configuration Release \
@@ -180,7 +180,7 @@ jobs:
           if [ "$build_ok" -ne 1 ]; then
             echo "ERROR: All objectVersion attempts failed. Dumping debug info:"
             echo "===== project.pbxproj header ====="
-            sed -n '1,200p' prostore.xcodeproj/project.pbxproj || true
+            sed -n '1,200p' prosign.xcodeproj/project.pbxproj || true
             echo "===== build directory listing ====="
             ls -la build || true
             exit 74
@@ -189,9 +189,9 @@ jobs:
       - name: Package Device IPA
         run: |
           set -e
-          ARCHIVE_PATH="$PWD/build/prostore.xcarchive"
-          APP_PATH="$ARCHIVE_PATH/Products/Applications/prostore.app"
-          OUTPUT_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
+          ARCHIVE_PATH="$PWD/build/prosign.xcarchive"
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/prosign.app"
+          OUTPUT_IPA="build/com.prostoreios.prosign-unsigned-ios.ipa"
           echo "Device app path: $APP_PATH"
           if [ ! -d "$APP_PATH" ]; then
             echo "ERROR: App not found at expected path. Listing archive contents:"
@@ -208,13 +208,13 @@ jobs:
       - name: Upload Device IPA
         uses: actions/upload-artifact@v4
         with:
-          name: com.prostoreios.prostore-unsigned-ios.ipa
-          path: build/com.prostoreios.prostore-unsigned-ios.ipa
+          name: com.prostoreios.prosign-unsigned-ios.ipa
+          path: build/com.prostoreios.prosign-unsigned-ios.ipa
 
       - name: Get App Version
         id: get_version
         run: |
-          VERSION=$(yq '.targets.prostore.info.properties.CFBundleShortVersionString' project.yml)
+          VERSION=$(yq '.targets.prosign.info.properties.CFBundleShortVersionString' project.yml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION"
 
@@ -247,7 +247,7 @@ jobs:
             if [ -z "$file" ]; then
               continue
             fi
-            v=$(printf "%s" "$file" | yq '.targets.prostore.info.properties.CFBundleShortVersionString' 2>/dev/null || true)
+            v=$(printf "%s" "$file" | yq '.targets.prosign.info.properties.CFBundleShortVersionString' 2>/dev/null || true)
             if [ -z "$v" ]; then
               continue
             fi
@@ -369,7 +369,7 @@ jobs:
       - name: Download Device IPA
         uses: actions/download-artifact@v4
         with:
-          name: com.prostoreios.prostore-unsigned-ios.ipa
+          name: com.prostoreios.prosign-unsigned-ios.ipa
           path: build
 
       - name: Create Release
@@ -381,10 +381,10 @@ jobs:
           TAG="v$VERSION"
           echo "Creating release $TAG with notes:"
           printf '%s\n' "$CHANGELOG"
-          DEVICE_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
+          DEVICE_IPA="build/com.prostoreios.prosign-unsigned-ios.ipa"
           gh release create "$TAG" \
             "$DEVICE_IPA" \
-            --title "ProStore v$VERSION" \
+            --title "Prosign v$VERSION" \
             --notes "$CHANGELOG" \
             --repo "$GITHUB_REPOSITORY"
         shell: bash
@@ -417,7 +417,7 @@ jobs:
       - name: Download Device IPA
         uses: actions/download-artifact@v4
         with:
-          name: com.prostoreios.prostore-unsigned-ios.ipa
+          name: com.prostoreios.prosign-unsigned-ios.ipa
           path: build
 
       - name: Update App Repo
@@ -427,8 +427,8 @@ jobs:
           CHANGELOG: ${{ needs.build-unsigned-ipa.outputs.changelog }}
         run: |
           set -e
-          IPA_PATH="$PWD/build/com.prostoreios.prostore-unsigned-ios.ipa"
-          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProStore/releases/download/v$VERSION/com.prostoreios.prostore-unsigned-ios.ipa"
+          IPA_PATH="$PWD/build/com.prostoreios.prosign-unsigned-ios.ipa"
+          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProSign/releases/download/v$VERSION/com.prostoreios.prosign-unsigned-ios.ipa"
           REPO_FILE="app-repo.json"
 
           if [ -f "$IPA_PATH" ]; then
@@ -443,16 +443,16 @@ jobs:
           MIN_OS="16.0"
           FULL_DATE=$(date +%Y%m%d%H%M%S)
 
-          ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
-          BUNDLE="com.prostoreios.prostore"
+          ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
+          BUNDLE="com.prostoreios.prosign"
           META_DESC="The BEST alternative app store for iOS!"
           DEVNAME="ProStore iOS"
           SCREENSHOTS='[
-            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot1.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot2.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot3.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot4.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/gallery/Screenshot5.png"
+            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png",
+            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"
           ]'
 
           # Ensure base repo JSON exists
@@ -489,7 +489,7 @@ jobs:
 
           # Update or create the app entry
           jq --argjson newVer "$NEW_VERSION" \
-             --arg name "ProStore" \
+             --arg name "ProSign" \
              --arg bundle "$BUNDLE" \
              --arg dev "$DEVNAME" \
              --arg desc "$META_DESC" \
@@ -567,7 +567,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Update apps.json from ProStore v${VERSION}"
+          git commit -m "Update apps.json for ProSign v${VERSION}"
           echo "Pushing apps.json to ${PAGES_REPO}:main"
           git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
         shell: bash
@@ -607,7 +607,7 @@ jobs:
       - name: Download Device IPA
         uses: actions/download-artifact@v4
         with:
-          name: com.prostoreios.prostore-unsigned-ios.ipa
+          name: com.prostoreios.prosign-unsigned-ios.ipa
           path: build
 
       - name: Handle Developer Release
@@ -615,8 +615,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          DEVICE_IPA="build/com.prostoreios.prostore-unsigned-ios.ipa"
-          DEV_IPA="build/com.prostoreios.prostore-developer-unsigned-ios.ipa"
+          DEVICE_IPA="build/com.prostoreios.prosign-unsigned-ios.ipa"
+          DEV_IPA="build/com.prostoreios.prosign-developer-unsigned-ios.ipa"
           mv "$DEVICE_IPA" "$DEV_IPA"
 
           TAG="developer"
@@ -641,7 +641,7 @@ jobs:
         run: |
           set -e
           REPO_FILE="developer-repo.json"
-          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProStore/releases/download/developer/com.prostoreios.prostore-developer-unsigned-ios.ipa"
+          DOWNLOAD_URL="https://github.com/ProStore-iOS/ProSign/releases/download/developer/com.prostoreios.prosign-developer-unsigned-ios.ipa"
 
           # Function to increment patch version
           increment_patch() {
@@ -670,12 +670,12 @@ jobs:
 
           # Create or update JSON (always replace with single version)
           jq -n \
-            --arg name "ProStore Developer Repo" \
-            --arg appname "ProStore Developer" \
+            --arg name "ProSign Developer Repo" \
+            --arg appname "ProSign Developer" \
             --arg devname "ProStore iOS" \
-            --arg bundleIdentifier "com.prostoreios.prostore" \
-            --arg description "The developer pre-release version of ProStore!" \
-            --arg iconURL "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" \
+            --arg bundleIdentifier "com.prostoreios.prosign" \
+            --arg description "The developer pre-release version of ProSign!" \
+            --arg iconURL "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png" \
             --arg version "$NEW_VERSION" \
             --arg url "$DOWNLOAD_URL" \
             '{
@@ -697,7 +697,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add "$REPO_FILE"
-          git commit -m "Update ProStore developer repo to $NEW_VERSION" || echo "No changes to commit"
+          git commit -m "Update ProSign developer repo to $NEW_VERSION" || echo "No changes to commit"
 
           git fetch origin main --quiet
           if git rev-parse --verify origin/main >/dev/null 2>&1; then
@@ -737,7 +737,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Update developer.json from ProStore developer build"
+          git commit -m "Update developer JSON from ProSign developer build"
           echo "Pushing developer.json to ${PAGES_REPO}:main"
           git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
         shell: bash

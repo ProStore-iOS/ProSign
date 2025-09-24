@@ -1,13 +1,12 @@
-# The ProStore app for iOS
-![Development Status](https://img.shields.io/badge/status-in%20development-yellow)  
-The best alternative App Store for iOS!  
-ProStore app source URL: https://prostore-ios.github.io/apps.json
+# The ProSign app for iOS
+The best on-device `.ipa` signer for iOS!  
+ProSign app source URL: https://prostore-ios.github.io/apps.json
 
-<img src="https://github.com/ProStore-iOS/ProStore/blob/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png?raw=true" width="200" />
+<img src="https://github.com/ProStore-iOS/ProSign/blob/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png?raw=true" width="200" />
 
 ---
 
-## Install ProStore
+## Install ProSign
 
 - <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=altstore">Add to AltStore</a>  
 - <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=sidestore">Add to SideStore</a>  

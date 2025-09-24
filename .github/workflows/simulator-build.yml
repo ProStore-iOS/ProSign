@@ -1,4 +1,4 @@
-name: ProStore iOS Simulator Build
+name: ProSign iOS Simulator Build
 
 on:
   workflow_dispatch:
@@ -82,15 +82,15 @@ jobs:
         run: |
           set -e
           xcodegen generate --spec project.yml
-          echo "Generated project at: $(pwd)/prostore.xcodeproj"
+          echo "Generated project at: $(pwd)/prosign.xcodeproj"
           echo "project.pbxproj header (first 60 lines):"
-          sed -n '1,60p' prostore.xcodeproj/project.pbxproj || true
+          sed -n '1,60p' prosign.xcodeproj/project.pbxproj || true
 
       - name: Resolve Swift Packages
         run: |
           set -e
-          echo "Resolving Swift package dependencies for prostore..."
-          xcodebuild -resolvePackageDependencies -project prostore.xcodeproj -scheme prostore -configuration Release
+          echo "Resolving Swift package dependencies for ProSign..."
+          xcodebuild -resolvePackageDependencies -project prosign.xcodeproj -scheme prosign -configuration Release
 
       - name: Build simulator (iphonesimulator) and package simulator .ipa (if possible)
         id: build_sim
@@ -101,8 +101,8 @@ jobs:
           rm -rf "$SIM_DERIVED"
           set +e
           xcodebuild clean build \
-            -project prostore.xcodeproj \
-            -scheme prostore \
+            -project prosign.xcodeproj \
+            -scheme prosign \
             -configuration Release \
             -sdk iphonesimulator \
             -derivedDataPath "$SIM_DERIVED" \
@@ -114,10 +114,10 @@ jobs:
           fi
 
           POSSIBLE_APPS=(
-            "$SIM_DERIVED/Build/Products/Release-iphonesimulator/prostore.app"
-            "$SIM_DERIVED/Build/Products/Debug-iphonesimulator/prostore.app"
-            "$PWD/build/Build/Products/Release-iphonesimulator/prostore.app"
-            "$PWD/build/Release-iphonesimulator/prostore.app"
+            "$SIM_DERIVED/Build/Products/Release-iphonesimulator/prosign.app"
+            "$SIM_DERIVED/Build/Products/Debug-iphonesimulator/prosign.app"
+            "$PWD/build/Build/Products/Release-iphonesimulator/prosign.app"
+            "$PWD/build/Release-iphonesimulator/prosign.app"
           )
 
           FOUND_APP=""
@@ -136,7 +136,7 @@ jobs:
           fi
 
           echo "Found simulator .app at: $FOUND_APP"
-          SIM_IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
+          SIM_IPA="build/com.prostoreios.prosign-unsigned-iossimulator.ipa"
           mkdir -p build/Payload-sim
           rm -rf build/Payload-sim/* || true
           cp -R "$FOUND_APP" build/Payload-sim/
@@ -147,7 +147,7 @@ jobs:
       - name: Set simulator artifact path output
         id: set_sim_art
         run: |
-          IPA="build/com.prostoreios.prostore-unsigned-iossimulator.ipa"
+          IPA="build/com.prostoreios.prosign-unsigned-iossimulator.ipa"
           if [ -f "$IPA" ]; then
             echo "ipa_path=$IPA" >> $GITHUB_OUTPUT
           else
@@ -158,5 +158,5 @@ jobs:
         if: steps.set_sim_art.outputs.ipa_path != ''
         uses: actions/upload-artifact@v4
         with:
-          name: com.prostoreios.prostore-unsigned-iossimulator.ipa
+          name: com.prostoreios.prosign-unsigned-iossimulator.ipa
           path: ${{ steps.set_sim_art.outputs.ipa_path }}

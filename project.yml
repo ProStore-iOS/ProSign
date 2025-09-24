@@ -1,4 +1,4 @@
-name: prostore
+name: prosign
 
 options:
   bundleIdPrefix: com.prostoreios
@@ -15,12 +15,12 @@ packages:
     branch: main
 
 targets:
-  prostore:
+  prosign:
     type: application
     platform: iOS
     deploymentTarget: "16.0"
-    sources: [Sources/prostore]
-    bundleId: com.prostoreios.prostore
+    sources: [Sources/prosign]
+    bundleId: com.prostoreios.prosign
     settings:
       IPHONEOS_DEPLOYMENT_TARGET: "16.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
@@ -28,10 +28,10 @@ targets:
     info:
       path: "Info.plist"
       properties:
-        CFBundleDisplayName: "ProStore"
-        CFBundleName: "prostore"
-        CFBundleVersion: "35"
-        CFBundleShortVersionString: "1.6.2"
+        CFBundleDisplayName: "ProSign"
+        CFBundleName: "prosign"
+        CFBundleVersion: "36"
+        CFBundleShortVersionString: "2.0.0"
         UILaunchStoryboardName: "LaunchScreen"
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
@@ -39,10 +39,10 @@ targets:
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
         CFBundleURLTypes:
-          - CFBundleURLName: "com.prostoreios.prostore"
+          - CFBundleURLName: "com.prostoreios.prosign"
             CFBundleURLSchemes:
-              - prostore
-              - ProStore
+              - prosign
+              - ProSign
     dependencies:
       - package: ZsignPackage
         product: ZsignSwift
