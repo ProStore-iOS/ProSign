@@ -11,5 +11,31 @@
     "repoIcon": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
   },
   "apps": [
+    {
+      "name": "ProSign",
+      "bundleIdentifier": "com.prostoreios.prosign",
+      "developerName": "ProStore iOS",
+      "localizedDescription": "The BEST alternative app store for iOS!",
+      "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
+      "screenshotURLs": [
+        "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png",
+        "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"
+      ],
+      "versions": [
+        {
+          "version": "2.0.0",
+          "date": "2025-09-24T07:02:09+0000",
+          "localizedDescription": "What's new in Version 2.0.0?\n- Rename ProStore to ProSign\n- More colour fixes and stuff\n- Add developer repo\n- Rename something\n- Update ProStore developer repo to 1.6.3d1\n- Add bundleIdentifyer\n- Update ProStore developer repo to 1.6.3d2\n- Add developer name\n- Update ProStore developer repo to 1.6.3d3\n- Add localizedDescription\n- Update ProStore developer repo to 1.6.3d3\n- Add iconURL to developer-repo\n- Update ProStore developer repo to 1.6.3d4",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.0.0/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3534692,
+          "sha256": "f1e504415a2649725bb6a93af2893aefc957917a870e31dae0e4b1b45aa7da1b",
+          "minOSVersion": "16.0",
+          "fullDate": "20250924070209"
+        }
+      ]
+    }
   ]
 }
