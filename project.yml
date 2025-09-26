@@ -30,8 +30,8 @@ targets:
       properties:
         CFBundleDisplayName: "ProSign"
         CFBundleName: "prosign"
-        CFBundleVersion: "36"
-        CFBundleShortVersionString: "2.0.0"
+        CFBundleVersion: "37"
+        CFBundleShortVersionString: "2.0.1"
         UILaunchStoryboardName: "LaunchScreen"
         NSPrincipalClass: "UIApplication"
         NSAppTransportSecurity:
