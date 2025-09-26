@@ -2,14 +2,9 @@
   "name": "Official ProStore Repo",
   "identifier": "com.prostoreios.prostore.repo",
   "sourceURL": "https://ProStore-iOS.github.io/apps.json",
-  "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
+  "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/icon.png",
   "website": "https://ProStore-iOS.github.io",
-  "ipawebsite": "https://github.com/ProStore-iOS/ProStore/releases",
   "subtitle": "The BEST alternative app store for iOS!",
-  "META": {
-    "repoName": "Official ProStore Repo",
-    "repoIcon": "https://raw.githubusercontent.com/ProStore-iOS/ProStore/refs/heads/main/Sources/prostore/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
-  },
   "apps": [
     {
       "name": "ProSign",

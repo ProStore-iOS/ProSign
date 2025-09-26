@@ -447,79 +447,66 @@ jobs:
           BUNDLE="com.prostoreios.prosign"
           META_DESC="The BEST alternative app store for iOS!"
           DEVNAME="ProStore iOS"
-          SCREENSHOTS='[
-            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png",
-            "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"
-          ]'
+          SCREENSHOTS='["https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"]'
 
-          # Ensure base repo JSON exists
+          # Ensure base repo JSON exists (matches your example, with expansion for $ICON_URL)
           if [ ! -f "$REPO_FILE" ]; then
-            echo '{
-              "name": "Official ProStore Repo",
-              "identifier": "com.prostoreios.prostore.repo",
-              "sourceURL": "https://ProStore-iOS.github.io/apps.json",
-              "iconURL": "'"$ICON_URL"'",
-              "website": "https://ProStore-iOS.github.io",
-              "ipawebsite": "https://github.com/ProStore-iOS/ProStore/releases",
-              "subtitle": "The BEST alternative app store for iOS!",
-              "META": {
-                "repoName": "Official ProStore Repo",
-                "repoIcon": "'"$ICON_URL"'"
-              },
-              "apps": []
-            }' > "$REPO_FILE"
+            cat > "$REPO_FILE" <<EOF
+  {
+    "name": "Official ProStore Repo",
+    "identifier": "com.prostoreios.prostore.repo",
+    "sourceURL": "https://ProStore-iOS.github.io/apps.json",
+    "iconURL": "$ICON_URL",
+    "website": "https://ProStore-iOS.github.io",
+    "subtitle": "The BEST alternative app store for iOS!",
+    "apps": []
+  }
+EOF
           fi
 
           TMP=$(mktemp)
 
-          # Build the JSON representation of the new version
-          NEW_VERSION=$(jq -c -n \
-            --arg version "$VERSION" \
-            --arg date "$VERSION_DATE_ISO" \
-            --arg desc "$CHANGELOG" \
-            --arg url "$DOWNLOAD_URL" \
-            --arg sha "$SHA256" \
-            --arg minos "$MIN_OS" \
-            --argjson size "$IPA_SIZE" \
-            --arg fulldate "$FULL_DATE" \
-            '{version: $version, date: $date, localizedDescription: $desc, downloadURL: $url, size: $size, sha256: $sha, minOSVersion: $minos, fullDate: $fulldate}')
+          # Build the JSON representation of the new version (on one line to avoid parser issues)
+          NEW_VERSION=$(jq -c -n --arg version "$VERSION" --arg date "$VERSION_DATE_ISO" --arg desc "$CHANGELOG" --arg url "$DOWNLOAD_URL" --arg sha "$SHA256" --arg minos "$MIN_OS" --arg fulldate "$FULL_DATE" --argjson size "$IPA_SIZE" '{version: $version, date: $date, localizedDescription: $desc, downloadURL: $url, size: $size, sha256: $sha, minOSVersion: $minos, fullDate: $fulldate}')
 
-          # Update or create the app entry
+          # JQ query with indented content to avoid YAML parser confusion
+          read -r -d '' JQ_QUERY <<'EOF'
+  if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then
+    .apps |= map(
+      if ((.bundleIdentifier // .bundleID) == $bundle) then
+        ( { "name": $name,
+            "bundleIdentifier": $bundle,
+            "developerName": $dev,
+            "localizedDescription": $appdesc,
+            "iconURL": $icon,
+            "screenshotURLs": $screenshots
+          } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } )
+      else . end
+    )
+  else
+    .apps += [
+      {
+        "name": $name,
+        "bundleIdentifier": $bundle,
+        "developerName": $dev,
+        "localizedDescription": $appdesc,
+        "iconURL": $icon,
+        "screenshotURLs": $screenshots,
+        "versions": [ $newVer ]
+      }
+    ]
+  end
+EOF
+
+          # Update or create the app entry (pass screenshots as argjson directly)
           jq --argjson newVer "$NEW_VERSION" \
              --arg name "ProSign" \
              --arg bundle "$BUNDLE" \
              --arg dev "$DEVNAME" \
-             --arg desc "$META_DESC" \
+             --arg appdesc "$META_DESC" \
              --arg icon "$ICON_URL" \
              --argjson screenshots "$SCREENSHOTS" \
-             'if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then
-                .apps |= map(
-                  if ((.bundleIdentifier // .bundleID) == $bundle) then
-                    ( { "name": $name,
-                        "bundleIdentifier": $bundle,
-                        "developerName": $dev,
-                        "localizedDescription": $desc,
-                        "iconURL": $icon,
-                        "screenshotURLs": $screenshots
-                      } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } )
-                  else . end
-                )
-              else
-                .apps += [
-                  {
-                    "name": $name,
-                    "bundleIdentifier": $bundle,
-                    "developerName": $dev,
-                    "localizedDescription": $desc,
-                    "iconURL": $icon,
-                    "screenshotURLs": $screenshots,
-                    "versions": [ $newVer ]
-                  }
-                ]
-              end' "$REPO_FILE" > "$TMP" && mv "$TMP" "$REPO_FILE"
+             "$JQ_QUERY" "$REPO_FILE" > "$TMP" && mv "$TMP" "$REPO_FILE"
 
           # Safe commit & push
           git config user.name "github-actions"
