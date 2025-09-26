@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.0.2",
+          "date": "2025-09-26T07:37:57+0000",
+          "localizedDescription": "What's new in Version 2.0.2?\n- Update to v2.0.2\n- Update app-repo\n- Fix YAML issues",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.0.2/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3534706,
+          "sha256": "f0a44b4fc6ca1af2f072d4d7dc7657d8d19bb8505f1743ebeb9d8368dd7610b2",
+          "minOSVersion": "16.0",
+          "fullDate": "20250926073757"
+        },
+        {
           "version": "2.0.1",
           "date": "2025-09-26T06:46:28+0000",
           "localizedDescription": "What's new in Version 2.0.1?\n- Update to v2.0.1\n- Remove developer repository\n- fix(ui): remove nested NavigationStacks and update navigation titles",
