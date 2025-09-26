@@ -90,7 +90,7 @@ struct AboutView: View {
                 }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle("About")
+            .navigationTitle("ProSign - About")
         }
     }
 }
