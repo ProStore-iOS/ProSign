@@ -449,54 +449,35 @@ jobs:
           DEVNAME="ProStore iOS"
           SCREENSHOTS='["https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"]'
 
-          # Ensure base repo JSON exists (matches your example, with expansion for $ICON_URL)
+          # Create base repo JSON safely (single command, YAML-friendly)
           if [ ! -f "$REPO_FILE" ]; then
-            cat > "$REPO_FILE" <<EOF
-  {
-    "name": "Official ProStore Repo",
-    "identifier": "com.prostoreios.prostore.repo",
-    "sourceURL": "https://ProStore-iOS.github.io/apps.json",
-    "iconURL": "$ICON_URL",
-    "website": "https://ProStore-iOS.github.io",
-    "subtitle": "The BEST alternative app store for iOS!",
-    "apps": []
-  }
-EOF
+            jq -n --arg icon "$ICON_URL" '{
+              name: "Official ProStore Repo",
+              identifier: "com.prostoreios.prostore.repo",
+              sourceURL: "https://ProStore-iOS.github.io/apps.json",
+              iconURL: $icon,
+              website: "https://ProStore-iOS.github.io",
+              subtitle: "The BEST alternative app store for iOS!",
+              apps: []
+            }' > "$REPO_FILE"
           fi
 
           TMP=$(mktemp)
 
           # Build the JSON representation of the new version (on one line to avoid parser issues)
-          NEW_VERSION=$(jq -c -n --arg version "$VERSION" --arg date "$VERSION_DATE_ISO" --arg desc "$CHANGELOG" --arg url "$DOWNLOAD_URL" --arg sha "$SHA256" --arg minos "$MIN_OS" --arg fulldate "$FULL_DATE" --argjson size "$IPA_SIZE" '{version: $version, date: $date, localizedDescription: $desc, downloadURL: $url, size: $size, sha256: $sha, minOSVersion: $minos, fullDate: $fulldate}')
+          NEW_VERSION=$(jq -c -n \
+            --arg version "$VERSION" \
+            --arg date "$VERSION_DATE_ISO" \
+            --arg desc "$CHANGELOG" \
+            --arg url "$DOWNLOAD_URL" \
+            --arg sha "$SHA256" \
+            --arg minos "$MIN_OS" \
+            --arg fulldate "$FULL_DATE" \
+            --argjson size "$IPA_SIZE" \
+            '{version: $version, date: $date, localizedDescription: $desc, downloadURL: $url, size: $size, sha256: $sha, minOSVersion: $minos, fullDate: $fulldate}')
 
-          # JQ query with indented content to avoid YAML parser confusion
-          read -r -d '' JQ_QUERY <<'EOF'
-  if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then
-    .apps |= map(
-      if ((.bundleIdentifier // .bundleID) == $bundle) then
-        ( { "name": $name,
-            "bundleIdentifier": $bundle,
-            "developerName": $dev,
-            "localizedDescription": $appdesc,
-            "iconURL": $icon,
-            "screenshotURLs": $screenshots
-          } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } )
-      else . end
-    )
-  else
-    .apps += [
-      {
-        "name": $name,
-        "bundleIdentifier": $bundle,
-        "developerName": $dev,
-        "localizedDescription": $appdesc,
-        "iconURL": $icon,
-        "screenshotURLs": $screenshots,
-        "versions": [ $newVer ]
-      }
-    ]
-  end
-EOF
+          # Single-line jq filter (YAML-friendly)
+          JQ_QUERY='if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then .apps |= map( if ((.bundleIdentifier // .bundleID) == $bundle) then ( { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } ) else . end ) else .apps += [ { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots, "versions": [ $newVer ] } ] end'
 
           # Update or create the app entry (pass screenshots as argjson directly)
           jq --argjson newVer "$NEW_VERSION" \
