@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import ProStoreTools
 
 struct SignerView: View {
     @State private var ipa = FileItem()
@@ -154,7 +155,7 @@ struct SignerView: View {
         isProcessing = true
         progressMessage = "Starting signing process..."
 
-        SigningManager.processSigning(
+        ProStoreTools.sign(
             ipaURL: ipaURL,
             p12URL: p12URL,
             provURL: provURL,
