@@ -3,9 +3,9 @@ import UniformTypeIdentifiers
 import ProStoreTools
 
 struct SignerView: View {
-    @State private var ipa = FileItem()
-    @State private var p12 = FileItem()
-    @State private var prov = FileItem()
+    @StateObject private var ipa = FileItem()
+    @StateObject private var p12 = FileItem()
+    @StateObject private var prov = FileItem()
     @State private var p12Password = ""
     @State private var isProcessing = false
     @State private var progressMessage = ""
