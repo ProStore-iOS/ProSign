@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.0.4",
+          "date": "2025-09-27T08:22:41+0000",
+          "localizedDescription": "What's new in Version 2.0.4?\n- Update to v2.0.4\n- Move all non-UI logic into ModelsAndManagers.swift and fix FileItem binding issues in SignerView",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.0.4/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3535331,
+          "sha256": "93ed7381287ed7852369c4192a8f1a83dbc90d182e6ac81749350f9758c1642d",
+          "minOSVersion": "16.0",
+          "fullDate": "20250927082241"
+        },
+        {
           "version": "2.0.3",
           "date": "2025-09-27T05:52:05+0000",
           "localizedDescription": "What's new in Version 2.0.3?\n- Update project.yml",
