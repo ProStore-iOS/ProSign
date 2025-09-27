@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.0.3",
+          "date": "2025-09-27T05:52:05+0000",
+          "localizedDescription": "What's new in Version 2.0.3?\n- Update project.yml",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.0.3/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3534705,
+          "sha256": "6fd3aaf6deb71faf35f653f2a3e65ac2a65239a734e67cc35834358bc5ec1deb",
+          "minOSVersion": "16.0",
+          "fullDate": "20250927055205"
+        },
+        {
           "version": "2.0.2",
           "date": "2025-09-26T07:37:57+0000",
           "localizedDescription": "What's new in Version 2.0.2?\n- Update to v2.0.2\n- Update app-repo\n- Fix YAML issues",
