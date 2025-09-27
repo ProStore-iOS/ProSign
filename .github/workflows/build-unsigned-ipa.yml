@@ -539,26 +539,3 @@ jobs:
           echo "Pushing apps.json to ${PAGES_REPO}:main"
           git push "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" HEAD:main
         shell: bash
-
-  trigger-simulator-build:
-    name: Trigger Simulator Build
-    needs: build-unsigned-ipa
-    if: needs.build-unsigned-ipa.outputs.release_exists == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install GitHub CLI
-        run: |
-          if ! command -v gh >/dev/null 2>&1; then
-            echo "Installing GitHub CLI..."
-            sudo apt update
-            sudo apt install gh -y || true
-          fi
-          echo "gh version: $(gh --version || echo 'not installed')"
-      - name: Trigger simulator-build.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Version already exists — triggering simulator build workflow..."
-          gh workflow run "simulator-build.yml" \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref main
