@@ -39,7 +39,7 @@ struct SignerView: View {
                 .padding(.vertical, 4)
                 
                 if hasSelectedCertificate, let name = selectedCertificateName {
-                    Text("The \(name) certificate will be used. If you wish to select a different certificate, please select a different one on the certificates page.")
+                    Text("The \(name) certificate will be used to sign the ipa file. If you wish to use a different certificate for signing, please select or add it to the certificates page.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
