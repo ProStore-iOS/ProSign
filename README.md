@@ -26,5 +26,6 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 
 # To-Do
 - [ ] Implement certificate selection on the Signing page.
-- [ ] Resolve issue causing some page titles to not display correctly.
+- [x] Resolve issue causing some page titles to not display correctly.
+- [x] Resolve color inconsistencies on the Certificates page
 - [ ] Display certificate status indicators: *Revoked*, *Signed*, or *Expiring Soon*.
