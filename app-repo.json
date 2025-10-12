@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.1.0",
+          "date": "2025-10-12T00:47:59+0000",
+          "localizedDescription": "What's new in Version 2.1.0?\n- Update version numbers in project.yml\n- Refactor CertificatesManager for clarity and efficiency\n- Refactor CertificateView and AddCertificateView\n- Refactor SignerView layout and functionality\n- Add custom titles to navigation bars in tabs\n- Refactor AboutView.swift for clarity and structure",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.1.0/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3734759,
+          "sha256": "3f0d53d4c74f35294a63fbe85e36970be630c06774b6037f8bac54e53f7ecee4",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012004759"
+        },
+        {
           "version": "2.0.5",
           "date": "2025-10-12T00:37:21+0000",
           "localizedDescription": "What's new in Version 2.0.5?\n- Refactor CertificateView and AddCertificateView\n- Add trigger simulator build step\n- Remove workflow_dispatch from simulator build\n- Add back workflow_dispatch\n- Remove trigger simulator build\n- Update README.md\n- Refactor getCertificateName method for better clarity\n- Add navigation title to SignerView\n- Update to v2.0.5\n- Refactor CertificatesManager for clarity and efficiency",
