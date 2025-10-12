@@ -15,6 +15,13 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 
 ---
 
+## Credits
+- **SuperGamer474** — Developer  
+- **ChatGPT** — Assistance
+- **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)
+
+---
+
 ## Gallery
 <img src="gallery/Screenshot1.png" width="550">&nbsp;
 <img src="gallery/Screenshot2.png" width="550">&nbsp;
