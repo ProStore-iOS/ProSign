@@ -25,80 +25,74 @@ struct CertificateView: View {
    
     var body: some View {
         // <-- Removed nested NavigationStack to avoid hiding the title from the parent stack
-        List {
-            Section {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                    ForEach(customCertificates) { cert in
-                        ZStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(cert.displayName)
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(20)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.white)
-                            .cornerRadius(16)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
-                            )
-                            .onTapGesture {
-                                // Only allow deselection if there are other certificates available
-                                if selectedCert == cert.folderName && customCertificates.count > 1 {
-                                    if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
-                                        selectedCert = nextCert.folderName
-                                        UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
-                                    }
-                                } else {
-                                    selectedCert = cert.folderName
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                ForEach(customCertificates) { cert in
+                    ZStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(cert.displayName)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                        }
+                        .padding(20)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
+                        )
+                        .onTapGesture {
+                            // Only allow deselection if there are other certificates available
+                            if selectedCert == cert.folderName && customCertificates.count > 1 {
+                                if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
+                                    selectedCert = nextCert.folderName
                                     UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
                                 }
+                            } else {
+                                selectedCert = cert.folderName
+                                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                            }
+                        }
+                       
+                        HStack {
+                            Button(action: {
+                                // EDIT: trigger identifiable sheet
+                                editingCertificate = cert
+                            }) {
+                                Image(systemName: "pencil")
+                                    .foregroundColor(.blue)
+                                    .font(.caption)
+                                    .padding(8)
+                                    .background(Color(.systemGray6).opacity(0.8))
+                                    .clipShape(Circle())
                             }
                            
-                            HStack {
-                                Button(action: {
-                                    // EDIT: trigger identifiable sheet
-                                    editingCertificate = cert
-                                }) {
-                                    Image(systemName: "pencil")
-                                        .foregroundColor(.blue)
-                                        .font(.caption)
-                                        .padding(8)
-                                        .background(Color(.systemGray6).opacity(0.8))
-                                        .clipShape(Circle())
+                            Spacer()
+                           
+                            Button(action: {
+                                if customCertificates.count > 1 {
+                                    certToDelete = cert
+                                    showingDeleteAlert = true
                                 }
-                               
-                                Spacer()
-                               
-                                Button(action: {
-                                    if customCertificates.count > 1 {
-                                        certToDelete = cert
-                                        showingDeleteAlert = true
-                                    }
-                                }) {
-                                    Image(systemName: "trash")
-                                        .foregroundColor(customCertificates.count > 1 ? .red : .gray)
-                                        .font(.caption)
-                                        .padding(8)
-                                        .background(Color(.systemGray6).opacity(0.8))
-                                        .clipShape(Circle())
-                                }
-                                .disabled(customCertificates.count <= 1)
+                            }) {
+                                Image(systemName: "trash")
+                                    .foregroundColor(customCertificates.count > 1 ? .red : .gray)
+                                    .font(.caption)
+                                    .padding(8)
+                                    .background(Color(.systemGray6).opacity(0.8))
+                                    .clipShape(Circle())
                             }
-                            .padding(.top, 12)
-                            .padding(.horizontal, 12)
+                            .disabled(customCertificates.count <= 1)
                         }
+                        .padding(.top, 12)
+                        .padding(.horizontal, 12)
                     }
                 }
-                .padding(.vertical)
             }
-            .listRowInsets(EdgeInsets())
+            .padding()
         }
-        .listStyle(.plain)
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
         .background(Color(.systemGray6))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
