@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.1.1",
+          "date": "2025-10-12T00:55:45+0000",
+          "localizedDescription": "What's new in Version 2.1.1?\n- Update to v2.1.1 (Fix sizing of titles in each view)\n- Refactor navigation titles and remove toolbars",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.1.1/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3734338,
+          "sha256": "64a7f792692ff37fe48363d29a5bc0bdde60cb75b9a4d5de30c129031ba05482",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012005545"
+        },
+        {
           "version": "2.1.0",
           "date": "2025-10-12T00:47:59+0000",
           "localizedDescription": "What's new in Version 2.1.0?\n- Update version numbers in project.yml\n- Refactor CertificatesManager for clarity and efficiency\n- Refactor CertificateView and AddCertificateView\n- Refactor SignerView layout and functionality\n- Add custom titles to navigation bars in tabs\n- Refactor AboutView.swift for clarity and structure",
