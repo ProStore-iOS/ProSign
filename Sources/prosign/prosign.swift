@@ -12,48 +12,30 @@ struct ProSign: App {
 struct MainTabView: View {
     var body: some View {
         TabView {
-            // ---- Signer Tab ----
             NavigationStack {
                 SignerView()
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .principal) {
-                            Text("ProSign - Signer")
-                                .font(.headline)
-                        }
-                    }
+                    .navigationTitle("ProSign - Signer")
+                    .navigationBarTitleDisplayMode(.large)
             }
             .tabItem {
                 Image(systemName: "hammer")
                 Text("Signer")
             }
 
-            // ---- Certificates Tab ----
             NavigationStack {
                 CertificateView()
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .principal) {
-                            Text("ProSign - Certificates")
-                                .font(.headline)
-                        }
-                    }
+                    .navigationTitle("ProSign - Certificates")
+                    .navigationBarTitleDisplayMode(.large)
             }
             .tabItem {
                 Image(systemName: "key")
                 Text("Certificates")
             }
 
-            // ---- About Tab ----
             NavigationStack {
                 AboutView()
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .principal) {
-                            Text("ProSign - About")
-                                .font(.headline)
-                        }
-                    }
+                    .navigationTitle("ProSign - About")
+                    .navigationBarTitleDisplayMode(.large)
             }
             .tabItem {
                 Image(systemName: "info.circle")
