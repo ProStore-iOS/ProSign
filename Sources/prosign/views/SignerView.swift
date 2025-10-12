@@ -124,8 +124,6 @@ struct SignerView: View {
                 }
             }
         }
-        .navigationTitle("ProSign - Signer")
-        .navigationBarTitleDisplayMode(.inline)
         .accentColor(.blue)
         .sheet(item: $showPickerFor, onDismiss: nil) { kind in
             DocumentPicker(kind: kind, onPick: { url in
@@ -182,4 +180,5 @@ struct SignerView: View {
             }
         )
     }
+
 }
