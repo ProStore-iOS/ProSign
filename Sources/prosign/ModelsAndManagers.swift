@@ -89,12 +89,13 @@ class CertificateFileManager {
             finalName = "\(baseName)-\(counter)"
             folderURL = certificatesDirectory.appendingPathComponent(finalName)
         }
+        
+        let displayToWrite = uniqueDisplayName(displayName, excludingFolder: finalName)
         try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
         
         try p12Data.write(to: folderURL.appendingPathComponent("certificate.p12"))
         try provData.write(to: folderURL.appendingPathComponent("profile.mobileprovision"))
         try password.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("password.txt"))
-        let displayToWrite = uniqueDisplayName(displayName, excludingFolder: nil)
         try displayToWrite.data(using: .utf8)?.write(to: folderURL.appendingPathComponent("name.txt"))
         
         return finalName
