@@ -87,22 +87,34 @@ public final class CertificatesManager {
     }
     
     /// Get the certificate's display name (subject summary)
-    public static func getCertificateName(p12Data: Data, password: String) -> String? {
-        let options = [kSecImportExportPassphrase as String: password] as CFDictionary
-        var itemsCF: CFArray?
-        let importStatus = SecPKCS12Import(p12Data as CFData, options, &itemsCF)
-        guard importStatus == errSecSuccess,
-              let items = itemsCF as? [[String: Any]],
-              let first = items.first else {
+    public static func getCertificateName(p12Data: Data, password: String, mobileProvisionData: Data) -> String? {
+        let startTag = Data("<plist".utf8)
+        let endTag = Data("</plist>".utf8)
+        guard let startRange = mobileProvisionData.range(of: startTag),
+              let endRange = mobileProvisionData.range(of: endTag) else {
             return nil
         }
-        let identity = first[kSecImportItemIdentity as String] as! SecIdentity
-        var certRef: SecCertificate?
-        let certStatus = SecIdentityCopyCertificate(identity, &certRef)
-        guard certStatus == errSecSuccess, let cert = certRef else {
+
+        let plistDataSlice = mobileProvisionData[startRange.lowerBound..<endRange.upperBound]
+        let plistData = Data(plistDataSlice)
+
+        // Parse plist into a dictionary
+        guard let parsed = try? PropertyListSerialization.propertyList(from: plistData, options: [], format: nil),
+              let dict = parsed as? [String: Any] else {
             return nil
         }
-        return SecCertificateCopySubjectSummary(cert) as String?
+
+        // Prefer TeamName if present
+        if let teamName = dict["TeamName"] as? String, !teamName.isEmpty {
+            return teamName
+        }
+
+        // Fallback to Name (string)
+        if let name = dict["Name"] as? String, !name.isEmpty {
+            return name
+        }
+
+        return nil
     }
     
     /// Top-level check: returns result
@@ -157,4 +169,5 @@ public final class CertificatesManager {
             return .failure(error)
         }
     }
+
 }
