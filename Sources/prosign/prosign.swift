@@ -14,12 +14,13 @@ struct MainTabView: View {
         TabView {
             NavigationStack {
                 SignerView()
+                    .navigationTitle("ProSign - Signer")
+                    .navigationBarTitleDisplayMode(.inline)
             }
             .tabItem {
                 Image(systemName: "hammer")
                 Text("Signer")
             }
-
             NavigationStack {
                 CertificateView()
             }
