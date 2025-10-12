@@ -333,7 +333,7 @@ struct AddCertificateView: View {
                 case .success(.success):
                     // Generate displayName from cert if not set
                     if localDisplayName.isEmpty {
-                        localDisplayName = CertificatesManager.getCertificateName(p12Data: p12Data, password: self.password) ?? "Custom Certificate"
+                        localDisplayName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? "Custom Certificate"
                     }
                     
                     if let folder = self.editingCertificate?.folderName {
@@ -366,4 +366,5 @@ struct AddCertificateView: View {
         }
         DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
+
 }
