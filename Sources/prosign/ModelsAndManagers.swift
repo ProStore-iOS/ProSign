@@ -1,3 +1,4 @@
+// ModelsAndManagers.swift
 import Foundation
 
 // MARK: - FileItem
@@ -150,7 +151,7 @@ class CertificateFileManager {
         return name.components(separatedBy: invalidChars).joined(separator: "_")
     }
 
-    // Return a unique display name by appending " 2", " 3", ... if needed.
+    // Return a unique display name by appending " 1", " 2", ... if needed.
     // `excludingFolder` lets updateCertificate keep the current folder's name out of the conflict check.
     private func uniqueDisplayName(_ desired: String, excludingFolder: String? = nil) -> String {
         let base = desired.isEmpty ? "Custom Certificate" : desired
@@ -172,7 +173,7 @@ class CertificateFileManager {
             return base
         }
 
-        var counter = 2
+        var counter = 1
         while existingNames.contains("\(base) \(counter)") {
             counter += 1
         }
