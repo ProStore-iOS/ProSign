@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.3.0",
+          "date": "2025-10-12T05:34:03+0000",
+          "localizedDescription": "What's new in Version 2.3.0?\n- Add progress for zipping and unzipping .ipa files during the signing process and update to v2.3.0\n- Refactor CertificateFileManager and FileItem classes\n- Refactor SignerView for improved functionality",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.3.0/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3728299,
+          "sha256": "4dacba36f69d1b27fd7d1fdbf71879e5edbe179ad99d7e146e16e02fd1751475",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012053403"
+        },
+        {
           "version": "2.2.2",
           "date": "2025-10-12T05:08:40+0000",
           "localizedDescription": "What's new in Version 2.2.2?\n- Update version numbers in project.yml\n- Update To-Do list in README with clearer tasks\n- Enhance CertificateView with new certificate handling\n- Refactor CertificateFileManager and FileItem classes",
