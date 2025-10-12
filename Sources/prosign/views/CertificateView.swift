@@ -94,8 +94,6 @@ struct CertificateView: View {
             .padding()
         }
         .background(Color(.systemGray6))
-        .navigationTitle("ProSign - Certificates") // <-- title applied to top-level view (parent NavigationStack will display this)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
@@ -368,3 +366,4 @@ struct AddCertificateView: View {
     }
 
 }
+
