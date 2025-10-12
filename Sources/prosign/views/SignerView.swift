@@ -4,14 +4,13 @@ import ProStoreTools
 
 struct SignerView: View {
     @StateObject private var ipa = FileItem()
-    @StateObject private var p12 = FileItem()
-    @StateObject private var prov = FileItem()
-    @State private var p12Password = ""
     @State private var isProcessing = false
     @State private var progressMessage = ""
     @State private var showActivity = false
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind?
+    @State private var selectedCertificateName: String? = nil
+    @State private var hasSelectedCertificate: Bool = false
 
     var body: some View {
         Form {
@@ -38,56 +37,18 @@ struct SignerView: View {
                     }
                 }
                 .padding(.vertical, 4)
-
-                // P12 picker with icon
-                HStack {
-                    Image(systemName: "lock.doc.fill")
-                        .foregroundColor(.blue)
-                    Text("P12")
-                    Spacer()
-                    Text(p12.name.isEmpty ? "No file selected" : p12.name)
-                        .font(.caption)
-                        .lineLimit(1)
+                
+                if hasSelectedCertificate, let name = selectedCertificateName {
+                    Text("The \(name) certificate will be used. If you wish to select a different certificate, please select a different one on the certificates page.")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Button(action: { showPickerFor = .p12 }) {
-                        Text("Pick")
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(8)
-                    }
+                        .padding(.vertical, 4)
+                } else {
+                    Text("No certificate selected. Please add and select one in the Certificates tab.")
+                        .foregroundColor(.red)
+                        .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
-
-                // MobileProvision picker with icon
-                HStack {
-                    Image(systemName: "gearshape.fill")
-                        .foregroundColor(.blue)
-                    Text("MobileProvision")
-                    Spacer()
-                    Text(prov.name.isEmpty ? "No file selected" : prov.name)
-                        .font(.caption)
-                        .lineLimit(1)
-                        .foregroundColor(.secondary)
-                    Button(action: { showPickerFor = .prov }) {
-                        Text("Pick")
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                }
-                .padding(.vertical, 4)
-
-                // Password field with secure icon
-                HStack {
-                    Image(systemName: "lock.fill")
-                        .foregroundColor(.blue)
-                    SecureField("P12 Password", text: $p12Password)
-                }
-                .padding(.vertical, 4)
             }
-
             Section {
                 Button(action: runSign) {
                     HStack {
@@ -97,18 +58,17 @@ struct SignerView: View {
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(isProcessing || ipa.url == nil || p12.url == nil || prov.url == nil ? Color.gray : Color.blue)
+                            .background(isProcessing || ipa.url == nil || !hasSelectedCertificate ? Color.gray : Color.blue)
                             .cornerRadius(10)
                             .shadow(radius: 2)
                         Spacer()
                     }
                 }
-                .disabled(isProcessing || ipa.url == nil || p12.url == nil || prov.url == nil)
+                .disabled(isProcessing || ipa.url == nil || !hasSelectedCertificate)
                 .scaleEffect(isProcessing ? 0.95 : 1.0)
                 .animation(.easeInOut(duration: 0.2), value: isProcessing)
             }
             .padding(.vertical, 8)
-
             Section(header: Text("Status")
                         .font(.headline)
                         .foregroundColor(.primary)
@@ -129,8 +89,7 @@ struct SignerView: View {
             DocumentPicker(kind: kind, onPick: { url in
                 switch kind {
                 case .ipa: ipa.url = url
-                case .p12: p12.url = url
-                case .prov: prov.url = url
+                default: break
                 }
             })
         }
@@ -142,17 +101,65 @@ struct SignerView: View {
                     .foregroundColor(.red)
             }
         }
+        .onAppear {
+            loadSelectedCertificate()
+        }
     }
-
-    func runSign() {
-        guard let ipaURL = ipa.url, let p12URL = p12.url, let provURL = prov.url else {
-            progressMessage = "Pick all input files first 😅"
+    
+    private func loadSelectedCertificate() {
+        guard let selectedFolder = UserDefaults.standard.string(forKey: "selectedCertificateFolder") else {
+            hasSelectedCertificate = false
             return
         }
-
+        
+        let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(selectedFolder)
+        
+        do {
+            if let nameData = try? Data(contentsOf: certDir.appendingPathComponent("name.txt")),
+               let name = String(data: nameData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+                selectedCertificateName = name
+            } else {
+                selectedCertificateName = "Custom Certificate"
+            }
+            hasSelectedCertificate = true
+        } catch {
+            hasSelectedCertificate = false
+            selectedCertificateName = nil
+        }
+    }
+    
+    func runSign() {
+        guard let ipaURL = ipa.url else {
+            progressMessage = "Pick IPA file first 😅"
+            return
+        }
+        
+        guard let selectedFolder = UserDefaults.standard.string(forKey: "selectedCertificateFolder") else {
+            progressMessage = "No certificate selected 😅"
+            return
+        }
+        
+        let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(selectedFolder)
+        let p12URL = certDir.appendingPathComponent("certificate.p12")
+        let provURL = certDir.appendingPathComponent("profile.mobileprovision")
+        let passwordURL = certDir.appendingPathComponent("password.txt")
+        
+        guard FileManager.default.fileExists(atPath: p12URL.path),
+              FileManager.default.fileExists(atPath: provURL.path) else {
+            progressMessage = "Error loading certificate files 😅"
+            return
+        }
+        
+        let p12Password: String
+        if let passwordData = try? Data(contentsOf: passwordURL),
+           let passwordStr = String(data: passwordData, encoding: .utf8) {
+            p12Password = passwordStr
+        } else {
+            p12Password = ""
+        }
+        
         isProcessing = true
         progressMessage = "Starting signing process..."
-
         ProStoreTools.sign(
             ipaURL: ipaURL,
             p12URL: p12URL,
@@ -166,13 +173,11 @@ struct SignerView: View {
             completion: { result in
                 DispatchQueue.main.async {
                     isProcessing = false
-
                     switch result {
                     case .success(let signedIPAURL):
                         activityURL = signedIPAURL
                         showActivity = true
                         progressMessage = "Done! ✅ IPA ready to share 🎉"
-
                     case .failure(let error):
                         progressMessage = "Error ❌: \(error.localizedDescription)"
                     }
@@ -180,5 +185,4 @@ struct SignerView: View {
             }
         )
     }
-
 }
