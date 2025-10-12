@@ -90,7 +90,6 @@ struct AboutView: View {
                 }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle("ProSign - About")
         }
     }
 }
@@ -145,4 +144,5 @@ struct AboutView_Previews: PreviewProvider {
     static var previews: some View {
         AboutView()
     }
+
 }
