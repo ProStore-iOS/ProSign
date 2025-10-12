@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.0.5",
+          "date": "2025-10-12T00:37:21+0000",
+          "localizedDescription": "What's new in Version 2.0.5?\n- Refactor CertificateView and AddCertificateView\n- Add trigger simulator build step\n- Remove workflow_dispatch from simulator build\n- Add back workflow_dispatch\n- Remove trigger simulator build\n- Update README.md\n- Refactor getCertificateName method for better clarity\n- Add navigation title to SignerView\n- Update to v2.0.5\n- Refactor CertificatesManager for clarity and efficiency",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.0.5/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3733648,
+          "sha256": "13475c544f232e3857212f14fb73f18e9e0489adb917dcf340639e33c7d41eb4",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012003721"
+        },
+        {
           "version": "2.0.4",
           "date": "2025-09-27T08:22:41+0000",
           "localizedDescription": "What's new in Version 2.0.4?\n- Update to v2.0.4\n- Move all non-UI logic into ModelsAndManagers.swift and fix FileItem binding issues in SignerView",
