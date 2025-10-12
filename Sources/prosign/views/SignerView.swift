@@ -8,16 +8,16 @@ struct SignerView: View {
     @State private var progressMessage = ""
     @State private var showActivity = false
     @State private var activityURL: URL? = nil
-    @State private var showPickerFor: PickerKind?
+    @State private var showPickerFor: PickerKind? = nil
     @State private var selectedCertificateName: String? = nil
     @State private var hasSelectedCertificate: Bool = false
 
     var body: some View {
         Form {
             Section(header: Text("Inputs")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .padding(.top, 8)) {
+                .font(.headline)
+                .foregroundColor(.primary)
+                .padding(.top, 8)) {
                 // IPA picker with icon and truncated file name
                 HStack {
                     Image(systemName: "doc.fill")
@@ -28,7 +28,9 @@ struct SignerView: View {
                         .font(.caption)
                         .lineLimit(1)
                         .foregroundColor(.secondary)
-                    Button(action: { showPickerFor = .ipa }) {
+                    Button(action: {
+                        showPickerFor = .ipa
+                    }) {
                         Text("Pick")
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -37,7 +39,7 @@ struct SignerView: View {
                     }
                 }
                 .padding(.vertical, 4)
-                
+
                 if hasSelectedCertificate, let name = selectedCertificateName {
                     Text("The \(name) certificate will be used to sign the ipa file. If you wish to use a different certificate for signing, please select or add it to the certificates page.")
                         .font(.subheadline)
@@ -49,6 +51,7 @@ struct SignerView: View {
                         .padding(.vertical, 4)
                 }
             }
+
             Section {
                 Button(action: runSign) {
                     HStack {
@@ -69,10 +72,11 @@ struct SignerView: View {
                 .animation(.easeInOut(duration: 0.2), value: isProcessing)
             }
             .padding(.vertical, 8)
+
             Section(header: Text("Status")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .padding(.top, 8)) {
+                .font(.headline)
+                .foregroundColor(.primary)
+                .padding(.top, 8)) {
                 HStack {
                     if isProcessing {
                         ProgressView()
@@ -88,8 +92,10 @@ struct SignerView: View {
         .sheet(item: $showPickerFor, onDismiss: nil) { kind in
             DocumentPicker(kind: kind, onPick: { url in
                 switch kind {
-                case .ipa: ipa.url = url
-                default: break
+                case .ipa:
+                    ipa.url = url
+                default:
+                    break
                 }
             })
         }
@@ -105,18 +111,17 @@ struct SignerView: View {
             loadSelectedCertificate()
         }
     }
-    
+
     private func loadSelectedCertificate() {
         guard let selectedFolder = UserDefaults.standard.string(forKey: "selectedCertificateFolder") else {
             hasSelectedCertificate = false
             return
         }
-        
         let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(selectedFolder)
-        
         do {
             if let nameData = try? Data(contentsOf: certDir.appendingPathComponent("name.txt")),
-               let name = String(data: nameData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+               let name = String(data: nameData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !name.isEmpty {
                 selectedCertificateName = name
             } else {
                 selectedCertificateName = "Custom Certificate"
@@ -127,29 +132,26 @@ struct SignerView: View {
             selectedCertificateName = nil
         }
     }
-    
+
     func runSign() {
         guard let ipaURL = ipa.url else {
             progressMessage = "Pick IPA file first 😅"
             return
         }
-        
         guard let selectedFolder = UserDefaults.standard.string(forKey: "selectedCertificateFolder") else {
             progressMessage = "No certificate selected 😅"
             return
         }
-        
         let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(selectedFolder)
         let p12URL = certDir.appendingPathComponent("certificate.p12")
         let provURL = certDir.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certDir.appendingPathComponent("password.txt")
-        
-        guard FileManager.default.fileExists(atPath: p12URL.path),
-              FileManager.default.fileExists(atPath: provURL.path) else {
+
+        guard FileManager.default.fileExists(atPath: p12URL.path), FileManager.default.fileExists(atPath: provURL.path) else {
             progressMessage = "Error loading certificate files 😅"
             return
         }
-        
+
         let p12Password: String
         if let passwordData = try? Data(contentsOf: passwordURL),
            let passwordStr = String(data: passwordData, encoding: .utf8) {
@@ -157,9 +159,10 @@ struct SignerView: View {
         } else {
             p12Password = ""
         }
-        
+
         isProcessing = true
         progressMessage = "Starting signing process..."
+
         ProStoreTools.sign(
             ipaURL: ipaURL,
             p12URL: p12URL,
