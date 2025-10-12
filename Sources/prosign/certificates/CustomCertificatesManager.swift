@@ -87,7 +87,8 @@ public final class CertificatesManager {
     }
     
     /// Get the certificate's display name (subject summary)
-    public static func getCertificateName(p12Data: Data, password: String, mobileProvisionData: Data) -> String? {
+    public static func getCertificateName(mobileProvisionData: Data) -> String? {
+        // Extract the <plist>...</plist> block from the mobileprovision (PKCS7) blob
         let startTag = Data("<plist".utf8)
         let endTag = Data("</plist>".utf8)
         guard let startRange = mobileProvisionData.range(of: startTag),
@@ -171,3 +172,4 @@ public final class CertificatesManager {
     }
 
 }
+
