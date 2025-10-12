@@ -1,19 +1,16 @@
 // CertificateView.swift
 import SwiftUI
 import UniformTypeIdentifiers
-
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
     var url: URL?
 }
-
 struct CustomCertificate: Identifiable {
     let id = UUID()
     let displayName: String
     let folderName: String
 }
-
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
@@ -22,7 +19,8 @@ struct CertificateView: View {
     @State private var selectedCert: String? = nil
     @State private var showingDeleteAlert = false
     @State private var certToDelete: CustomCertificate?
-   
+    @State private var newlyAddedFolder: String? = nil
+  
     var body: some View {
         // <-- Removed nested NavigationStack to avoid hiding the title from the parent stack
         ScrollView {
@@ -55,7 +53,7 @@ struct CertificateView: View {
                                 UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
                             }
                         }
-                       
+                      
                         HStack {
                             Button(action: {
                                 // EDIT: trigger identifiable sheet
@@ -68,9 +66,9 @@ struct CertificateView: View {
                                     .background(Color(.systemGray6).opacity(0.8))
                                     .clipShape(Circle())
                             }
-                           
+                          
                             Spacer()
-                           
+                          
                             Button(action: {
                                 if customCertificates.count > 1 {
                                     certToDelete = cert
@@ -106,8 +104,13 @@ struct CertificateView: View {
         // ADD sheet (new certificate only)
         .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
             reloadCertificatesAndEnsureSelection()
+            if let newFolder = newlyAddedFolder {
+                selectedCert = newFolder
+                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                newlyAddedFolder = nil
+            }
         }) {
-            AddCertificateView()
+            AddCertificateView(onSave: { newlyAddedFolder = $0 })
                 .presentationDetents([.large])
         }
         // EDIT sheet (identifiable)
@@ -131,13 +134,13 @@ struct CertificateView: View {
             reloadCertificatesAndEnsureSelection()
         }
     }
-   
+  
     private func reloadCertificatesAndEnsureSelection() {
         customCertificates = CertificateFileManager.shared.loadCertificates()
         selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
         ensureSelection()
     }
-   
+  
     private func ensureSelection() {
         if selectedCert == nil || !customCertificates.contains(where: { $0.folderName == selectedCert }) {
             if let firstCert = customCertificates.first {
@@ -146,11 +149,11 @@ struct CertificateView: View {
             }
         }
     }
-   
+  
     private func deleteCertificate(_ cert: CustomCertificate) {
         try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
         customCertificates = CertificateFileManager.shared.loadCertificates()
-       
+      
         if selectedCert == cert.folderName {
             if let newSelection = customCertificates.first {
                 selectedCert = newSelection.folderName
@@ -163,12 +166,12 @@ struct CertificateView: View {
         ensureSelection()
     }
 }
-
 // MARK: - Add / Edit View
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
     let editingCertificate: CustomCertificate?
-   
+    let onSave: ((String) -> Void)?
+  
     @State private var p12File: CertificateFileItem?
     @State private var provFile: CertificateFileItem?
     @State private var password = ""
@@ -177,11 +180,12 @@ struct AddCertificateView: View {
     @State private var errorMessage = ""
     @State private var displayName: String = ""
     @State private var hasLoadedForEdit = false
-   
-    init(editingCertificate: CustomCertificate? = nil) {
+  
+    init(editingCertificate: CustomCertificate? = nil, onSave: ((String) -> Void)? = nil) {
         self.editingCertificate = editingCertificate
+        self.onSave = onSave
     }
-   
+  
     var body: some View {
         // Use a NavigationStack inside the sheet so the sheet has its own nav bar
         NavigationStack {
@@ -201,7 +205,7 @@ struct AddCertificateView: View {
                         }
                     }
                     .disabled(isChecking)
-                   
+                  
                     Button(action: { activeSheet = .prov }) {
                         HStack {
                             Image(systemName: "gearshape.fill")
@@ -217,12 +221,12 @@ struct AddCertificateView: View {
                     }
                     .disabled(isChecking)
                 }
-               
+              
                 Section(header: Text("Display Name")) {
                     TextField("Optional Display Name", text: $displayName)
                         .disabled(isChecking)
                 }
-               
+              
                 Section(header: Text("Password")) {
                     SecureField("Enter Password", text: $password)
                         .disabled(isChecking)
@@ -230,7 +234,7 @@ struct AddCertificateView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-               
+              
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -246,7 +250,7 @@ struct AddCertificateView: View {
                     }
                     .disabled(isChecking)
                 }
-               
+              
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isChecking {
                         ProgressView()
@@ -279,17 +283,17 @@ struct AddCertificateView: View {
             }
         } // NavigationStack
     }
-   
+  
     private func loadForEdit(cert: CustomCertificate) {
         let certFolder = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(cert.folderName)
         let p12URL = certFolder.appendingPathComponent("certificate.p12")
         let provURL = certFolder.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certFolder.appendingPathComponent("password.txt")
         let nameURL = certFolder.appendingPathComponent("name.txt")
-       
+      
         p12File = CertificateFileItem(name: "certificate.p12", url: p12URL)
         provFile = CertificateFileItem(name: "profile.mobileprovision", url: provURL)
-       
+      
         if let pwData = try? Data(contentsOf: passwordURL), let pw = String(data: pwData, encoding: .utf8) {
             password = pw
         }
@@ -299,10 +303,10 @@ struct AddCertificateView: View {
     }
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
-       
+      
         isChecking = true
         errorMessage = ""
-       
+      
         let workItem: DispatchWorkItem = DispatchWorkItem {
             do {
                 var p12Data: Data
@@ -322,21 +326,22 @@ struct AddCertificateView: View {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 }
-               
+              
                 let checkResult = CertificatesManager.check(p12Data: p12Data, password: self.password, mobileProvisionData: provData)
                 var dispatchError: String?
-               
+              
                 switch checkResult {
                 case .success(.success):
                     // Generate displayName from cert if not set
                     if localDisplayName.isEmpty {
                         localDisplayName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? "Custom Certificate"
                     }
-                   
+                  
                     if let folder = self.editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
                     } else {
-                        _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
+                        let newFolder = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
+                        self.onSave?(newFolder)
                     }
                 case .success(.incorrectPassword):
                     dispatchError = "Incorrect Password"
@@ -345,7 +350,7 @@ struct AddCertificateView: View {
                 case .failure(let error):
                     dispatchError = "Error: \(error.localizedDescription)"
                 }
-               
+              
                 DispatchQueue.main.async {
                     self.isChecking = false
                     if let err = dispatchError {
