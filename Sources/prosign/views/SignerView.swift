@@ -5,7 +5,11 @@ import ProStoreTools
 struct SignerView: View {
     @StateObject private var ipa = FileItem()
     @State private var isProcessing = false
-    @State private var progressMessage = ""
+    @State private var overallProgress: Double = 0.0
+    @State private var currentStage: String = ""
+    @State private var barColor: Color = .blue
+    @State private var isError: Bool = false
+    @State private var errorDetails: String = ""
     @State private var showActivity = false
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind? = nil
@@ -73,18 +77,26 @@ struct SignerView: View {
             }
             .padding(.vertical, 8)
 
-            Section(header: Text("Status")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .padding(.top, 8)) {
-                HStack {
-                    if isProcessing {
-                        ProgressView()
-                            .padding(.trailing, 8)
+            if isProcessing || !currentStage.isEmpty {
+                Section(header: Text("Progress")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding(.top, 8)) {
+                    HStack {
+                        Text(currentStage)
+                            .foregroundColor(currentStage == "Error" ? .red : currentStage == "Done!" ? .green : .primary)
+                        ProgressView(value: overallProgress)
+                            .progressViewStyle(.linear)
+                            .tint(barColor)
+                            .frame(maxWidth: .infinity)
+                        Text("\(Int(overallProgress * 100))%")
+                            .foregroundColor(currentStage == "Error" ? .red : currentStage == "Done!" ? .green : .primary)
                     }
-                    Text(progressMessage)
-                        .foregroundColor(progressMessage.contains("Error") ? .red : progressMessage.contains("Done") ? .green : .primary)
-                        .animation(.easeIn, value: progressMessage)
+                    if isError {
+                        Text(errorDetails)
+                            .foregroundColor(.red)
+                            .font(.subheadline)
+                    }
                 }
             }
         }
@@ -135,11 +147,23 @@ struct SignerView: View {
 
     func runSign() {
         guard let ipaURL = ipa.url else {
-            progressMessage = "Pick IPA file first 😅"
+            currentStage = "Error"
+            errorDetails = "Pick IPA file first 😅"
+            isError = true
+            withAnimation {
+                overallProgress = 1.0
+                barColor = .red
+            }
             return
         }
         guard let selectedFolder = UserDefaults.standard.string(forKey: "selectedCertificateFolder") else {
-            progressMessage = "No certificate selected 😅"
+            currentStage = "Error"
+            errorDetails = "No certificate selected 😅"
+            isError = true
+            withAnimation {
+                overallProgress = 1.0
+                barColor = .red
+            }
             return
         }
         let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(selectedFolder)
@@ -148,7 +172,13 @@ struct SignerView: View {
         let passwordURL = certDir.appendingPathComponent("password.txt")
 
         guard FileManager.default.fileExists(atPath: p12URL.path), FileManager.default.fileExists(atPath: provURL.path) else {
-            progressMessage = "Error loading certificate files 😅"
+            currentStage = "Error"
+            errorDetails = "Error loading certificate files 😅"
+            isError = true
+            withAnimation {
+                overallProgress = 1.0
+                barColor = .red
+            }
             return
         }
 
@@ -161,7 +191,11 @@ struct SignerView: View {
         }
 
         isProcessing = true
-        progressMessage = "Starting signing process..."
+        currentStage = "Preparing"
+        overallProgress = 0.0
+        barColor = .blue
+        isError = false
+        errorDetails = ""
 
         ProStoreTools.sign(
             ipaURL: ipaURL,
@@ -170,7 +204,7 @@ struct SignerView: View {
             p12Password: p12Password,
             progressUpdate: { message in
                 DispatchQueue.main.async {
-                    progressMessage = message
+                    updateProgress(from: message)
                 }
             },
             completion: { result in
@@ -179,13 +213,62 @@ struct SignerView: View {
                     switch result {
                     case .success(let signedIPAURL):
                         activityURL = signedIPAURL
-                        showActivity = true
-                        progressMessage = "Done! ✅ IPA ready to share 🎉"
+                        withAnimation {
+                            overallProgress = 1.0
+                            barColor = .green
+                            currentStage = "Done!"
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            showActivity = true
+                        }
                     case .failure(let error):
-                        progressMessage = "Error ❌: \(error.localizedDescription)"
+                        withAnimation {
+                            overallProgress = 1.0
+                            barColor = .red
+                            currentStage = "Error"
+                        }
+                        isError = true
+                        errorDetails = error.localizedDescription
                     }
                 }
             }
         )
+    }
+
+    private func updateProgress(from message: String) {
+        withAnimation {
+            if message.contains("Preparing") {
+                currentStage = "Preparing"
+                overallProgress = 0.0
+            } else if message.contains("Unzipping") {
+                currentStage = "Unzipping"
+                if let pct = extractPercentage(from: message) {
+                    overallProgress = 0.25 + (pct / 100.0) * 0.25
+                } else {
+                    overallProgress = 0.25
+                }
+            } else if message.contains("Signing") {
+                currentStage = "Signing"
+                overallProgress = 0.5
+            } else if message.contains("Zipping") {
+                currentStage = "Zipping"
+                if let pct = extractPercentage(from: message) {
+                    overallProgress = 0.75 + (pct / 100.0) * 0.25
+                } else {
+                    overallProgress = 0.75
+                }
+            }
+        }
+    }
+
+    private func extractPercentage(from message: String) -> Double? {
+        if let range = message.range(of: "(") {
+            let substring = message[range.lowerBound...]
+            if let endRange = substring.range(of: "%)") {
+                let pctString = substring[..<endRange.lowerBound].dropFirst()
+                return Double(pctString)
+            }
+        }
+        return nil
     }
 }
