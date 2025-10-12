@@ -38,7 +38,7 @@ struct CertificateView: View {
                             }
                             .padding(20)
                             .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
+                            .background(Color.white)
                             .cornerRadius(16)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
@@ -66,7 +66,7 @@ struct CertificateView: View {
                                         .foregroundColor(.blue)
                                         .font(.caption)
                                         .padding(8)
-                                        .background(Color.white.opacity(0.8))
+                                        .background(Color(.systemGray6).opacity(0.8))
                                         .clipShape(Circle())
                                 }
                                
@@ -82,7 +82,7 @@ struct CertificateView: View {
                                         .foregroundColor(customCertificates.count > 1 ? .red : .gray)
                                         .font(.caption)
                                         .padding(8)
-                                        .background(Color.white.opacity(0.8))
+                                        .background(Color(.systemGray6).opacity(0.8))
                                         .clipShape(Circle())
                                 }
                                 .disabled(customCertificates.count <= 1)
@@ -97,6 +97,8 @@ struct CertificateView: View {
             .listRowInsets(EdgeInsets())
         }
         .listStyle(.plain)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
         .background(Color(.systemGray6))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
