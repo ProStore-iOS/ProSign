@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.1.2",
+          "date": "2025-10-12T01:24:27+0000",
+          "localizedDescription": "What's new in Version 2.1.2?\n- Fix title display issues (Hopefully) & Update to v2.1.2\n- Remove title bar because this is now handled in prosign.swift\n- Refactor CertificateView to use List instead of ScrollView\n- Remove title bar because this is now handled in prosign.swift",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.1.2/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3734675,
+          "sha256": "bdefd74fa18c39cf118eb2ffba7c84c11f6c9d9eee83ab49c11f238fd387346b",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012012427"
+        },
+        {
           "version": "2.1.1",
           "date": "2025-10-12T00:55:45+0000",
           "localizedDescription": "What's new in Version 2.1.1?\n- Update to v2.1.1 (Fix sizing of titles in each view)\n- Refactor navigation titles and remove toolbars",
