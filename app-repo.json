@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.2.0",
+          "date": "2025-10-12T02:07:54+0000",
+          "localizedDescription": "What's new in Version 2.2.0?\n- Use selected certificate in the signing view & update to v2.2.0\n- Refactor CertificateView layout to use ScrollView\n- Update README with resolved issues in To-Do list\n- Enhance SignerView with certificate management",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.2.0/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3733709,
+          "sha256": "13a23f52fc708eb09fe5916e3d4c66a4421d4c095468df7a3ff7af52782e3eb7",
+          "minOSVersion": "16.0",
+          "fullDate": "20251012020754"
+        },
+        {
           "version": "2.1.3",
           "date": "2025-10-12T01:38:58+0000",
           "localizedDescription": "What's new in Version 2.1.3?\n- Fix colouring issues on certificates view and update to v2.1.3\n- Refactor CertificateView layout and functionality",
