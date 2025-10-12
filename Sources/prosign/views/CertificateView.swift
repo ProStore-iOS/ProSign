@@ -97,8 +97,6 @@ struct CertificateView: View {
             .listRowInsets(EdgeInsets())
         }
         .listStyle(.plain)
-        .navigationTitle("ProSign - Certificates")
-        .navigationBarTitleDisplayMode(.large)
         .background(Color(.systemGray6))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
