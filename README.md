@@ -36,7 +36,8 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 - [x] Fix issue causing certain page titles to not display correctly.
 - [x] Correct colour inconsistencies on the Certificates page.
 - [x] Replace status text with a progress bar on the Signing page.
-- [-] Display certificate status indicators: *Revoked*, *Signed*, or *Expiring Soon*.
+- [x] Display certificate status indicators: *Revoked*, *Signed*, or *Expiring Soon*.
+- [ ] Fix bug where all certificates show as 'revoked'.
 - [ ] Resolve missing file errors in upload fields.
 - [ ] Add expiry dates to certificates.
 - [ ] Include an option to add official certificates when adding new certs.
