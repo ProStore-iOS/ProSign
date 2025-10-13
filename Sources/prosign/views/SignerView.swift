@@ -43,7 +43,6 @@ struct SignerView: View {
                     }
                 }
                 .padding(.vertical, 4)
-
                 if hasSelectedCertificate, let name = selectedCertificateName {
                     Text("The \(name) certificate will be used to sign the ipa file. If you wish to use a different certificate for signing, please select or add it to the certificates page.")
                         .font(.subheadline)
@@ -55,7 +54,6 @@ struct SignerView: View {
                         .padding(.vertical, 4)
                 }
             }
-
             Section {
                 Button(action: runSign) {
                     HStack {
@@ -76,7 +74,6 @@ struct SignerView: View {
                 .animation(.easeInOut(duration: 0.2), value: isProcessing)
             }
             .padding(.vertical, 8)
-
             if isProcessing || !currentStage.isEmpty {
                 Section(header: Text("Progress")
                     .font(.headline)
@@ -85,12 +82,16 @@ struct SignerView: View {
                     HStack {
                         Text(currentStage)
                             .foregroundColor(currentStage == "Error" ? .red : currentStage == "Done!" ? .green : .primary)
+                            .animation(.easeInOut(duration: 0.2), value: currentStage)
                         ProgressView(value: overallProgress)
                             .progressViewStyle(.linear)
                             .tint(barColor)
                             .frame(maxWidth: .infinity)
+                            .animation(.easeInOut(duration: 0.5), value: overallProgress)
+                            .animation(.default, value: barColor)
                         Text("\(Int(overallProgress * 100))%")
                             .foregroundColor(currentStage == "Error" ? .red : currentStage == "Done!" ? .green : .primary)
+                            .animation(nil, value: overallProgress)
                     }
                     if isError {
                         Text(errorDetails)
@@ -170,7 +171,6 @@ struct SignerView: View {
         let p12URL = certDir.appendingPathComponent("certificate.p12")
         let provURL = certDir.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certDir.appendingPathComponent("password.txt")
-
         guard FileManager.default.fileExists(atPath: p12URL.path), FileManager.default.fileExists(atPath: provURL.path) else {
             currentStage = "Error"
             errorDetails = "Error loading certificate files 😅"
@@ -181,7 +181,6 @@ struct SignerView: View {
             }
             return
         }
-
         let p12Password: String
         if let passwordData = try? Data(contentsOf: passwordURL),
            let passwordStr = String(data: passwordData, encoding: .utf8) {
@@ -189,14 +188,12 @@ struct SignerView: View {
         } else {
             p12Password = ""
         }
-
         isProcessing = true
         currentStage = "Preparing"
         overallProgress = 0.0
         barColor = .blue
         isError = false
         errorDetails = ""
-
         ProStoreTools.sign(
             ipaURL: ipaURL,
             p12URL: p12URL,
@@ -236,27 +233,25 @@ struct SignerView: View {
     }
 
     private func updateProgress(from message: String) {
-        withAnimation {
-            if message.contains("Preparing") {
-                currentStage = "Preparing"
-                overallProgress = 0.0
-            } else if message.contains("Unzipping") {
-                currentStage = "Unzipping"
-                if let pct = extractPercentage(from: message) {
-                    overallProgress = 0.25 + (pct / 100.0) * 0.25
-                } else {
-                    overallProgress = 0.25
-                }
-            } else if message.contains("Signing") {
-                currentStage = "Signing"
-                overallProgress = 0.5
-            } else if message.contains("Zipping") {
-                currentStage = "Zipping"
-                if let pct = extractPercentage(from: message) {
-                    overallProgress = 0.75 + (pct / 100.0) * 0.25
-                } else {
-                    overallProgress = 0.75
-                }
+        if message.contains("Preparing") {
+            currentStage = "Preparing"
+            overallProgress = 0.0
+        } else if message.contains("Unzipping") {
+            currentStage = "Unzipping"
+            if let pct = extractPercentage(from: message) {
+                overallProgress = 0.25 + (pct / 100.0) * 0.25
+            } else {
+                overallProgress = 0.25
+            }
+        } else if message.contains("Signing") {
+            currentStage = "Signing"
+            overallProgress = 0.5
+        } else if message.contains("Zipping") {
+            currentStage = "Zipping"
+            if let pct = extractPercentage(from: message) {
+                overallProgress = 0.75 + (pct / 100.0) * 0.25
+            } else {
+                overallProgress = 0.75
             }
         }
     }
