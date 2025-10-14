@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.5.1d",
+          "date": "2025-10-14T06:49:05+0000",
+          "localizedDescription": "What's new in Version 2.5.1d?\n- Update to debug version v2.5.1d\n- Update README.md\n- Update README.md\n- Enhance CertStatus with raw status numbers\n- Debug version\n- Debug update",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.5.1d/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3736561,
+          "sha256": "b805937f5fe7297c6d24c6fca503b54d714278c254b83af5a7ad00ce92d709cf",
+          "minOSVersion": "16.0",
+          "fullDate": "20251014064905"
+        },
+        {
           "version": "2.5.0",
           "date": "2025-10-13T06:11:55+0000",
           "localizedDescription": "What's new in Version 2.5.0?\n- Update to v2.5.0\n- Remove duplicate progress bar task from To-Do\n- Delete gallery directory\n- Add updated images to gallery\n- Rename IMG_0300.png to screenshot5.png\n- Rename IMG_0304.png to screenshot4.png\n- Rename IMG_0303.png to screenshot2.png\n- Rename IMG_0302.png to screenshot1.png\n- Rename IMG_0301.png to screenshot3.png\n- Rename screenshot1.png to Screenshot1.png\n- Delete gallery/screenshot2.png\n- Rename screenshot3.png to Screenshot3.png\n- Rename screenshot4.png to Screenshot4.png\n- Rename screenshot5.png to Screenshot5.png\n- Add files via upload\n- Rename image to Screenshot2\n- Add credits section to README\n- Update progress UI: instant percentage updates, sliding bar animation, fading status text\n- Delete LICENSE_LC.txt\n- Delete Sources/prosign/certificates/CustomCertificatesManager.swift\n- Add back CertificatesManager.swift file\n- Implement certificate status tracking in CertificateView",
