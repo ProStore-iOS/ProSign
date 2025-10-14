@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import ProStoreTools
+
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
@@ -12,11 +13,12 @@ struct CustomCertificate: Identifiable {
     let folderName: String
 }
 
+// CertStatus stores the optional expiration Date and the raw numeric status returned from checkRevokage
 enum CertStatus {
     case loading
-    case signed(Date?)
-    case revoked(Date?)
-    case unknown
+    case signed(Date?, Int)   // e.g. (expirationDate, rawStatusNumber)
+    case revoked(Date?, Int)  // e.g. (expirationDate, rawStatusNumber)
+    case unknown(Int)         // rawStatusNumber for unknown (-1, etc.)
 }
 
 extension CertStatus {
@@ -24,12 +26,12 @@ extension CertStatus {
         switch self {
         case .loading:
             return "Status: Loading"
-        case .signed:
-            return "Status: Signed"
-        case .revoked:
-            return "Status: Revoked"
-        case .unknown:
-            return "Status: Unknown"
+        case .signed(_, let raw):
+            return "Status: Signed (\(raw))"
+        case .revoked(_, let raw):
+            return "Status: Revoked (\(raw))"
+        case .unknown(let raw):
+            return "Status: Unknown (\(raw))"
         }
     }
     
@@ -45,7 +47,20 @@ extension CertStatus {
             return .yellow
         }
     }
+    
+    // Optional: expose expiration date if needed elsewhere
+    var expirationDate: Date? {
+        switch self {
+        case .signed(let date, _):
+            return date
+        case .revoked(let date, _):
+            return date
+        default:
+            return nil
+        }
+    }
 }
+
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
@@ -211,11 +226,11 @@ struct CertificateView: View {
                     let newStatus: CertStatus
                     switch status {
                     case 0:
-                        newStatus = .signed(expirationDate)
+                        newStatus = .signed(expirationDate, status)
                     case 1, 2:
-                        newStatus = .revoked(expirationDate)
+                        newStatus = .revoked(expirationDate, status)
                     default:
-                        newStatus = .unknown
+                        newStatus = .unknown(status)
                     }
                     self.certStatuses[folderName] = newStatus
                 }
