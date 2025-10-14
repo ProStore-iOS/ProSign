@@ -203,12 +203,12 @@ struct CertificateView: View {
         for cert in customCertificates {
             let folderName = cert.folderName
             certStatuses[folderName] = .loading
-            
+
             let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(folderName)
             let p12URL = certDir.appendingPathComponent("certificate.p12")
             let provURL = certDir.appendingPathComponent("profile.mobileprovision")
             let passwordURL = certDir.appendingPathComponent("password.txt")
-            
+
             let p12Password: String
             if let passwordData = try? Data(contentsOf: passwordURL),
                let passwordStr = String(data: passwordData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
@@ -216,21 +216,24 @@ struct CertificateView: View {
             } else {
                 p12Password = ""
             }
-            
+
             ProStoreTools.checkRevokage(
                 p12URL: p12URL,
                 provURL: provURL,
                 p12Password: p12Password
             ) { status, expirationDate, error in
                 DispatchQueue.main.async {
+                    // Convert Int32 -> Int ONCE and use rawStatus everywhere
+                    let rawStatus = Int(status)
+
                     let newStatus: CertStatus
-                    switch status {
+                    switch rawStatus {
                     case 0:
-                        newStatus = .signed(expirationDate, status)
+                        newStatus = .signed(expirationDate, rawStatus)
                     case 1, 2:
-                        newStatus = .revoked(expirationDate, status)
+                        newStatus = .revoked(expirationDate, rawStatus)
                     default:
-                        newStatus = .unknown(status)
+                        newStatus = .unknown(rawStatus)
                     }
                     self.certStatuses[folderName] = newStatus
                 }
@@ -467,3 +470,4 @@ struct AddCertificateView: View {
         DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
 }
+
