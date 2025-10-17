@@ -1,7 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import ProStoreTools
-
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
@@ -12,59 +11,9 @@ struct CustomCertificate: Identifiable {
     let displayName: String
     let folderName: String
 }
-
-// CertStatus stores the optional expiration Date and the raw numeric status returned from checkRevokage
-enum CertStatus {
-    case loading
-    case signed(Date?, Int)   // e.g. (expirationDate, rawStatusNumber)
-    case revoked(Date?, Int)  // e.g. (expirationDate, rawStatusNumber)
-    case unknown(Int)         // rawStatusNumber for unknown (-1, etc.)
-}
-
-extension CertStatus {
-    var description: String {
-        switch self {
-        case .loading:
-            return "Status: Loading"
-        case .signed(_, let raw):
-            return "Status: Signed (\(raw))"
-        case .revoked(_, let raw):
-            return "Status: Revoked (\(raw))"
-        case .unknown(let raw):
-            return "Status: Unknown (\(raw))"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .loading:
-            return .black
-        case .signed:
-            return .green
-        case .revoked:
-            return .red
-        case .unknown:
-            return .yellow
-        }
-    }
-    
-    // Optional: expose expiration date if needed elsewhere
-    var expirationDate: Date? {
-        switch self {
-        case .signed(let date, _):
-            return date
-        case .revoked(let date, _):
-            return date
-        default:
-            return nil
-        }
-    }
-}
-
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
-    @State private var certStatuses: [String: CertStatus] = [:]
     @State private var showAddCertificateSheet = false
     @State private var editingCertificate: CustomCertificate? = nil // Used only for edit sheet (.sheet(item:))
     @State private var selectedCert: String? = nil
@@ -83,12 +32,6 @@ struct CertificateView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
-                            if let status = certStatuses[cert.folderName] {
-                                Text(status.description)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(status.color)
-                            }
                         }
                         .padding(20)
                         .frame(maxWidth: .infinity)
@@ -196,49 +139,6 @@ struct CertificateView: View {
         customCertificates = CertificateFileManager.shared.loadCertificates()
         selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
         ensureSelection()
-        checkStatuses()
-    }
-    
-    private func checkStatuses() {
-        for cert in customCertificates {
-            let folderName = cert.folderName
-            certStatuses[folderName] = .loading
-
-            let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(folderName)
-            let p12URL = certDir.appendingPathComponent("certificate.p12")
-            let provURL = certDir.appendingPathComponent("profile.mobileprovision")
-            let passwordURL = certDir.appendingPathComponent("password.txt")
-
-            let p12Password: String
-            if let passwordData = try? Data(contentsOf: passwordURL),
-               let passwordStr = String(data: passwordData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
-                p12Password = passwordStr
-            } else {
-                p12Password = ""
-            }
-
-            ProStoreTools.checkRevokage(
-                p12URL: p12URL,
-                provURL: provURL,
-                p12Password: p12Password
-            ) { status, expirationDate, error in
-                DispatchQueue.main.async {
-                    // Convert Int32 -> Int ONCE and use rawStatus everywhere
-                    let rawStatus = Int(status)
-
-                    let newStatus: CertStatus
-                    switch rawStatus {
-                    case 0:
-                        newStatus = .signed(expirationDate, rawStatus)
-                    case 1, 2:
-                        newStatus = .revoked(expirationDate, rawStatus)
-                    default:
-                        newStatus = .unknown(rawStatus)
-                    }
-                    self.certStatuses[folderName] = newStatus
-                }
-            }
-        }
     }
  
     private func ensureSelection() {
@@ -264,7 +164,6 @@ struct CertificateView: View {
             }
         }
         ensureSelection()
-        checkStatuses()
     }
 }
 // MARK: - Add / Edit View
@@ -470,4 +369,3 @@ struct AddCertificateView: View {
         DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
 }
-
