@@ -11,9 +11,40 @@ struct CustomCertificate: Identifiable {
     let displayName: String
     let folderName: String
 }
+// MARK: - Date Extension for Formatting
+extension Date {
+    func formattedWithOrdinal() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        let month = formatter.string(from: self)
+        let day = Calendar.current.component(.day, from: self)
+        let ordinal = ordinalSuffix(for: day)
+        let year = Calendar.current.component(.year, from: self)
+        return "\(ordinal) of \(month) \(year)"
+    }
+    
+    private func ordinalSuffix(for number: Int) -> String {
+        let suffix: String
+        let ones = number % 10
+        let tens = (number / 10) % 10
+        if tens == 1 {
+            suffix = "th"
+        } else if ones == 1 {
+            suffix = "st"
+        } else if ones == 2 {
+            suffix = "nd"
+        } else if ones == 3 {
+            suffix = "rd"
+        } else {
+            suffix = "th"
+        }
+        return "\(number)\(suffix)"
+    }
+}
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
+    @State private var certExpiries: [String: Date?] = [:]
     @State private var showAddCertificateSheet = false
     @State private var editingCertificate: CustomCertificate? = nil // Used only for edit sheet (.sheet(item:))
     @State private var selectedCert: String? = nil
@@ -32,10 +63,32 @@ struct CertificateView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
+                            if let expiry = certExpiries[cert.folderName] {
+                                let now = Date()
+                                let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
+                                let days = components.day ?? 0
+                                let displayDate = expiry.formattedWithOrdinal()
+                                let expiryText: String
+                                if days > 0 {
+                                    expiryText = "Expires in \(days) days on \(displayDate)"
+                                } else {
+                                    let pastDays = abs(days)
+                                    expiryText = "Expired \(pastDays) days ago on \(displayDate)"
+                                }
+                                Text(expiryText)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                            } else {
+                                Text("No expiry date")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         .padding(20)
                         .frame(maxWidth: .infinity)
-                        .background(Color.white)
+                        .background(backgroundColor(for: cert.folderName))
                         .cornerRadius(16)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
@@ -134,11 +187,39 @@ struct CertificateView: View {
             reloadCertificatesAndEnsureSelection()
         }
     }
+    
+    private func backgroundColor(for folderName: String) -> Color {
+        guard let expiry = certExpiries[folderName], expiry != nil else {
+            return Color.clear
+        }
+        let now = Date()
+        let components = Calendar.current.dateComponents([.day], from: now, to: expiry!)
+        let days = components.day ?? 0
+        switch days {
+        case ..<0, 0:
+            return .red.opacity(0.15)
+        case 1...30:
+            return .yellow.opacity(0.15)
+        default:
+            return .green.opacity(0.15)
+        }
+    }
  
     private func reloadCertificatesAndEnsureSelection() {
         customCertificates = CertificateFileManager.shared.loadCertificates()
         selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
         ensureSelection()
+        loadExpiries()
+    }
+    
+    private func loadExpiries() {
+        for cert in customCertificates {
+            let folderName = cert.folderName
+            let certDir = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(folderName)
+            let provURL = certDir.appendingPathComponent("profile.mobileprovision")
+            let expiry = ProStoreTools.getExpirationDate(provURL: provURL)
+            certExpiries[folderName] = expiry
+        }
     }
  
     private func ensureSelection() {
@@ -164,6 +245,7 @@ struct CertificateView: View {
             }
         }
         ensureSelection()
+        loadExpiries()
     }
 }
 // MARK: - Add / Edit View
