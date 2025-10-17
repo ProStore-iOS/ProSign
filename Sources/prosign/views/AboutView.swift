@@ -18,7 +18,7 @@ struct AboutView: View {
             avatarURL: URL(string: "https://github.com/SuperGamer474.png")!
         ),
         Credit(
-            name: "zhlynn",
+            name: "Zhlynn",
             role: "Original zsign",
             profileURL: URL(string: "https://github.com/zhlynn")!,
             avatarURL: URL(string: "https://github.com/zhlynn.png")!
@@ -30,7 +30,7 @@ struct AboutView: View {
             avatarURL: URL(string: "https://github.com/khcrysalis.png")!
         ),
         Credit(
-            name: "loyahdev",
+            name: "Loyahdev",
             role: "iOS Certificates Source",
             profileURL: URL(string: "https://github.com/loyahdev")!,
             avatarURL: URL(string: "https://github.com/loyahdev.png")!
