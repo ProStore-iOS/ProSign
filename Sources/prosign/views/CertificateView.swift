@@ -131,8 +131,8 @@ struct CertificateView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
-            if let expiry = certExpiries[cert.folderName] {
-                expiryDisplay(for: expiry)
+            if let expiry = certExpiries[cert.folderName], let validExpiry = expiry {
+                expiryDisplay(for: validExpiry)
             } else {
                 Text("No expiry date")
                     .font(.caption)
