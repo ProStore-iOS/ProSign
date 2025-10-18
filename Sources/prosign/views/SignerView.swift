@@ -14,6 +14,7 @@ struct SignerView: View {
     @State private var activityURL: URL? = nil
     @State private var showPickerFor: PickerKind? = nil
     @State private var selectedCertificateName: String? = nil
+    @State private var expireStatus: String = "Unknown"
     @State private var hasSelectedCertificate: Bool = false
 
     var body: some View {
@@ -28,7 +29,7 @@ struct SignerView: View {
                         .foregroundColor(.blue)
                     Text("IPA")
                     Spacer()
-                    Text(ipa.name.isEmpty ? "No file selected" : ipa.name)
+                    Text(ipa.name.isEmpty ? "No file selected selected" : ipa.name)
                         .font(.caption)
                         .lineLimit(1)
                         .foregroundColor(.secondary)
@@ -44,7 +45,7 @@ struct SignerView: View {
                 }
                 .padding(.vertical, 4)
                 if hasSelectedCertificate, let name = selectedCertificateName {
-                    Text("The \(name) certificate will be used to sign the ipa file. If you wish to use a different certificate for signing, please select or add it to the certificates page.")
+                    Text("The \(name) certificate (\(expireStatus)) will be used to sign the ipa file. If you wish to use a different certificate for signing, please select or add it to the certificates page.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
@@ -139,10 +140,27 @@ struct SignerView: View {
             } else {
                 selectedCertificateName = "Custom Certificate"
             }
+            let provURL = certDir.appendingPathComponent("profile.mobileprovision")
+            if let expiry = ProStoreTools.getExpirationDate(provURL: provURL) {
+                let now = Date()
+                let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
+                let days = components.day ?? 0
+                switch days {
+                case ..<0, 0:
+                    expireStatus = "Expired"
+                case 1...30:
+                    expireStatus = "Expiring Soon"
+                default:
+                    expireStatus = "Valid"
+                }
+            } else {
+                expireStatus = "Unknown"
+            }
             hasSelectedCertificate = true
         } catch {
             hasSelectedCertificate = false
             selectedCertificateName = nil
+            expireStatus = "Unknown"
         }
     }
 
