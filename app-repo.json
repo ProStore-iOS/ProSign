@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "2.6.1",
+          "date": "2025-10-18T01:15:25+0000",
+          "localizedDescription": "What's new in Version 2.6.1?\n- Add cert status in brackets on the signer view & update to v2.6.1",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v2.6.1/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3737526,
+          "sha256": "8118a3b740a135e3637c67c61900384491a21c78152a777bc1baed801e1a22bf",
+          "minOSVersion": "16.0",
+          "fullDate": "20251018011525"
+        },
+        {
           "version": "2.6.0",
           "date": "2025-10-18T01:09:06+0000",
           "localizedDescription": "What's new in Version 2.6.0?\n- Update to v2.6.0 with certificate exipiry\n- Remove revoke check as it is not working\n- Update README checklist by removing completed tasks\n- Update capital letters in AboutView\n- Implement getExpirationDate method\n- Fix bug in CertificatesView\n- Initial plan\n- Merge pull request #5 from ProStore-iOS/copilot/fix-safe-unwrap-cert-expiry\n- Fix optional Date unwrapping in CertificateView to resolve compiler error when displaying expiry dates\n- Remove duplicate task for expiry dates in README",
