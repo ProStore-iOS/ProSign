@@ -11,6 +11,18 @@ struct CustomCertificate: Identifiable {
     let displayName: String
     let folderName: String
 }
+// MARK: - Release Models
+struct Release: Codable, Identifiable, Equatable {
+    let id: Int
+    let name: String
+    let tagName: String
+    let publishedAt: Date
+    let assets: [Asset]
+}
+struct Asset: Codable {
+    let name: String
+    let browserDownloadUrl: String
+}
 // MARK: - Date Extension for Formatting
 extension Date {
     func formattedWithOrdinal() -> String {
@@ -41,11 +53,207 @@ extension Date {
         return "\(number)\(suffix)"
     }
 }
+// MARK: - Official Certificates View
+struct OfficialCertificatesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var releases: [Release] = []
+    @State private var selectedRelease: Release? = nil
+    @State private var statusMessage = ""
+    @State private var isChecking = false
+    @State private var p12Data: Data? = nil
+    @State private var provData: Data? = nil
+    @State private var password: String? = nil
+    @State private var displayName = ""
+    @State private var expiry: Date? = nil
+    
+    private var isSuccess: Bool {
+        statusMessage.contains("Success")
+    }
+    
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Select Official Certificate") {
+                    Picker("Certificate", selection: $selectedRelease) {
+                        Text("Select a certificate").tag(Release?.none)
+                        ForEach(releases) { release in
+                            Text(cleanName(release.name)).tag(Optional(release))
+                        }
+                    }
+                }
+                Section {
+                    Text("Provided by loyahdev")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                if let release = selectedRelease {
+                    Section("Details") {
+                        Text("Tag: \(release.tagName)")
+                        Text("Published: \(release.publishedAt, formatter: dateFormatter)")
+                    }
+                }
+                Section {
+                    Button("Check Certificate") {
+                        checkCertificate()
+                    }
+                    .disabled(selectedRelease == nil || isChecking)
+                    if !statusMessage.isEmpty {
+                        Text(statusMessage)
+                            .foregroundColor(isSuccess ? .green : .red)
+                    }
+                }
+                Section {
+                    Button("Add Certificate") {
+                        addCertificate()
+                    }
+                    .disabled(p12Data == nil || isChecking)
+                }
+            }
+            .navigationTitle("Official Certificates")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("×") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                fetchReleases()
+            }
+        }
+    }
+    
+    private func cleanName(_ name: String) -> String {
+        name.replacingOccurrences(of: "\\\\", with: "").replacingOccurrences(of: "\\", with: "")
+    }
+    
+    private func fetchReleases() {
+        guard let url = URL(string: "https://api.github.com/repos/loyahdev/certificates/releases") else { return }
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let decoded = try decoder.decode([Release].self, from: data)
+                await MainActor.run {
+                    self.releases = decoded.sorted { $0.publishedAt > $1.publishedAt }
+                }
+            } catch {
+                await MainActor.run {
+                    self.statusMessage = "Failed to fetch releases: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func checkCertificate() {
+        guard let release = selectedRelease,
+              let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }),
+              let downloadUrl = URL(string: asset.browserDownloadUrl) else {
+            statusMessage = "Invalid release"
+            return
+        }
+        isChecking = true
+        statusMessage = "Downloading..."
+        Task {
+            do {
+                let (tempData, _) = try await URLSession.shared.data(from: downloadUrl)
+                let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
+                let zipPath = tempDir.appendingPathComponent("temp.zip")
+                try tempData.write(to: zipPath)
+                let extractDir = tempDir.appendingPathComponent("extracted")
+                try FileManager.default.unzipItem(at: zipPath, to: extractDir, progress: nil)
+                // Find files
+                var p12Urls: [URL] = []
+                var provUrls: [URL] = []
+                if let enumerator = FileManager.default.enumerator(at: extractDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                    for case let fileURL as URL in enumerator {
+                        let path = fileURL.path
+                        if path.hasSuffix(".p12") {
+                            p12Urls.append(fileURL)
+                        } else if path.hasSuffix(".mobileprovision") {
+                            provUrls.append(fileURL)
+                        }
+                    }
+                }
+                try FileManager.default.removeItem(at: tempDir)
+                guard p12Urls.count == 1, provUrls.count == 1 else {
+                    throw NSError(domain: "Extraction", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to extract certificate"])
+                }
+                let p12Url = p12Urls[0]
+                let provUrl = provUrls[0]
+                let p12Data = try Data(contentsOf: p12Url)
+                let provData = try Data(contentsOf: provUrl)
+                var successPw: String?
+                for pw in ["Hydrogen", "Sideloadingdotorg"] {
+                    switch CertificatesManager.check(p12Data: p12Data, password: pw, mobileProvisionData: provData) {
+                    case .success(.success):
+                        successPw = pw
+                        break
+                    default:
+                        break
+                    }
+                }
+                guard let pw = successPw else {
+                    throw NSError(domain: "Password", code: 1, userInfo: [NSLocalizedDescriptionKey: "Password check failed"])
+                }
+                let exp = ProStoreTools.getExpirationDate(provData: provData)
+                let dispName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? cleanName(release.name)
+                await MainActor.run {
+                    self.p12Data = p12Data
+                    self.provData = provData
+                    self.password = pw
+                    self.displayName = dispName
+                    self.expiry = exp
+                    self.statusMessage = "Success: Ready to add \(dispName), expires \(exp?.formattedWithOrdinal() ?? "Unknown")"
+                    self.isChecking = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.statusMessage = "Error: \(error.localizedDescription)"
+                    self.isChecking = false
+                }
+            }
+        }
+    }
+    
+    private func addCertificate() {
+        guard let p12Data = p12Data,
+              let provData = provData,
+              let pw = password else { return }
+        isChecking = true
+        statusMessage = "Adding..."
+        Task {
+            do {
+                _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: pw, displayName: displayName)
+                await MainActor.run {
+                    self.statusMessage = "Added successfully"
+                    self.isChecking = false
+                    self.dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    self.statusMessage = "Error adding: \(error.localizedDescription)"
+                    self.isChecking = false
+                }
+            }
+        }
+    }
+}
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
     @State private var certExpiries: [String: Date?] = [:]
     @State private var showAddCertificateSheet = false
+    @State private var showOfficialSheet = false
     @State private var editingCertificate: CustomCertificate? = nil // Used only for edit sheet (.sheet(item:))
     @State private var selectedCert: String? = nil
     @State private var showingDeleteAlert = false
@@ -65,9 +273,18 @@ struct CertificateView: View {
         .background(Color(.systemGray6))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showAddCertificateSheet = true
-                }) {
+                Menu {
+                    Button {
+                        showAddCertificateSheet = true
+                    } label: {
+                        Label("Add from Files", systemImage: "folder.badge.plus")
+                    }
+                    Button {
+                        showOfficialSheet = true
+                    } label: {
+                        Label("Add from Official", systemImage: "globe")
+                    }
+                } label: {
                     Image(systemName: "plus")
                 }
             }
@@ -82,6 +299,13 @@ struct CertificateView: View {
             }
         }) {
             AddCertificateView(onSave: { newlyAddedFolder = $0 })
+                .presentationDetents([.large])
+        }
+        // Official sheet
+        .sheet(isPresented: $showOfficialSheet, onDismiss: {
+            reloadCertificatesAndEnsureSelection()
+        }) {
+            OfficialCertificatesView()
                 .presentationDetents([.large])
         }
         // EDIT sheet (identifiable)
