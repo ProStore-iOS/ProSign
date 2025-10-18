@@ -29,7 +29,7 @@ struct Release: Codable, Identifiable, Equatable, Hashable {
         Date()
     }
 }
-struct Asset: Codable {
+struct Asset: Codable, Hashable, Equatable {
     let name: String
     let browserDownloadUrl: String
     
@@ -176,7 +176,7 @@ struct OfficialCertificatesView: View {
                 var decodeData = data
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
                     // Fallback to unauthenticated
-                    var fallbackRequest = URLRequest(url: url)
+                    let fallbackRequest = URLRequest(url: url)
                     let (fallbackData, _) = try await URLSession.shared.data(for: fallbackRequest)
                     decodeData = fallbackData
                 }
@@ -194,11 +194,28 @@ struct OfficialCertificatesView: View {
         }
     }
     
+    private func findCertificateFiles(in directory: URL) throws -> (p12Urls: [URL], provUrls: [URL]) {
+        var p12Urls: [URL] = []
+        var provUrls: [URL] = []
+        if let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]) {
+            for case let fileURL as URL in enumerator {
+                let path = fileURL.path
+                if !path.contains("__MACOSX") {
+                    if path.hasSuffix(".p12") {
+                        p12Urls.append(fileURL)
+                    } else if path.hasSuffix(".mobileprovision") {
+                        provUrls.append(fileURL)
+                    }
+                }
+            }
+        }
+        return (p12Urls, provUrls)
+    }
+    
     private func checkCertificate() {
         guard let release = selectedRelease,
               let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }),
-              let downloadStr = asset.browserDownloadUrl,
-              let downloadUrl = URL(string: downloadStr) else {
+              let downloadUrl = URL(string: asset.browserDownloadUrl) else {
             statusMessage = "Invalid release"
             return
         }
@@ -216,7 +233,7 @@ struct OfficialCertificatesView: View {
                 (tempData, response) = try await URLSession.shared.data(for: downloadRequest)
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
                     // Fallback
-                    var fallbackRequest = URLRequest(url: downloadUrl)
+                    let fallbackRequest = URLRequest(url: downloadUrl)
                     (tempData, _) = try await URLSession.shared.data(for: fallbackRequest)
                 }
                 let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -229,20 +246,7 @@ struct OfficialCertificatesView: View {
                 let extractDir = tempDir.appendingPathComponent("extracted")
                 try FileManager.default.unzipItem(at: zipPath, to: extractDir, progress: nil)
                 // Find files
-                var p12Urls: [URL] = []
-                var provUrls: [URL] = []
-                if let enumerator = FileManager.default.enumerator(at: extractDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]) {
-                    for case let fileURL as URL in enumerator {
-                        let path = fileURL.path
-                        if !path.contains("__MACOSX") {
-                            if path.hasSuffix(".p12") {
-                                p12Urls.append(fileURL)
-                            } else if path.hasSuffix(".mobileprovision") {
-                                provUrls.append(fileURL)
-                            }
-                        }
-                    }
-                }
+                let (p12Urls, provUrls) = try findCertificateFiles(in: extractDir)
                 guard p12Urls.count == 1, provUrls.count == 1 else {
                     throw NSError(domain: "Extraction", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to extract certificate"])
                 }
