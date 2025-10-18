@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import ProStoreTools
+import ZIPFoundation
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
@@ -12,16 +13,29 @@ struct CustomCertificate: Identifiable {
     let folderName: String
 }
 // MARK: - Release Models
-struct Release: Codable, Identifiable, Equatable {
+struct Release: Codable, Identifiable, Equatable, Hashable {
     let id: Int
     let name: String
     let tagName: String
-    let publishedAt: Date
+    let publishedAt: String
     let assets: [Asset]
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, tagName = "tag_name", publishedAt = "published_at", assets
+    }
+    
+    var publishedDate: Date {
+        // Will be handled by decoder
+        Date()
+    }
 }
 struct Asset: Codable {
     let name: String
     let browserDownloadUrl: String
+    
+    enum CodingKeys: String, CodingKey {
+        case name, browserDownloadUrl = "browser_download_url"
+    }
 }
 // MARK: - Date Extension for Formatting
 extension Date {
@@ -81,9 +95,9 @@ struct OfficialCertificatesView: View {
             Form {
                 Section("Select Official Certificate") {
                     Picker("Certificate", selection: $selectedRelease) {
-                        Text("Select a certificate").tag(Release?.none)
+                        Text("Select a certificate").tag(nil as Release?)
                         ForEach(releases) { release in
-                            Text(cleanName(release.name)).tag(Optional(release))
+                            Text(cleanName(release.name)).tag(release as Release?)
                         }
                     }
                 }
@@ -95,7 +109,7 @@ struct OfficialCertificatesView: View {
                 if let release = selectedRelease {
                     Section("Details") {
                         Text("Tag: \(release.tagName)")
-                        Text("Published: \(release.publishedAt, formatter: dateFormatter)")
+                        Text("Published: \(dateFormatter.string(from: isoDate(string: release.publishedAt)))")
                     }
                 }
                 Section {
@@ -112,7 +126,7 @@ struct OfficialCertificatesView: View {
                     Button("Add Certificate") {
                         addCertificate()
                     }
-                    .disabled(p12Data == nil || isChecking)
+                    .disabled(p12Data == nil || provData == nil || password == nil || isChecking)
                 }
             }
             .navigationTitle("Official Certificates")
@@ -130,20 +144,47 @@ struct OfficialCertificatesView: View {
         }
     }
     
+    private func isoDate(string: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: string) ?? Date()
+    }
+    
     private func cleanName(_ name: String) -> String {
         name.replacingOccurrences(of: "\\\\", with: "").replacingOccurrences(of: "\\", with: "")
     }
     
+    private func getPAT() async -> String? {
+        guard let url = URL(string: "https://certapi.loyah.dev/pac") else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            return nil
+        }
+    }
+    
     private func fetchReleases() {
-        guard let url = URL(string: "https://api.github.com/repos/loyahdev/certificates/releases") else { return }
         Task {
+            let pat = await getPAT()
+            let url = URL(string: "https://api.github.com/repos/loyahdev/certificates/releases")!
+            var request = URLRequest(url: url)
+            if let pat = pat {
+                request.setValue("token \(pat)", forHTTPHeaderField: "Authorization")
+            }
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                var decodeData = data
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
+                    // Fallback to unauthenticated
+                    var fallbackRequest = URLRequest(url: url)
+                    let (fallbackData, _) = try await URLSession.shared.data(for: fallbackRequest)
+                    decodeData = fallbackData
+                }
                 let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                let decoded = try decoder.decode([Release].self, from: data)
+                decoder.dateDecodingStrategy = .deferredToDate
+                let decoded = try decoder.decode([Release].self, from: decodeData)
                 await MainActor.run {
-                    self.releases = decoded.sorted { $0.publishedAt > $1.publishedAt }
+                    self.releases = decoded.sorted { isoDate(string: $0.publishedAt) > isoDate(string: $1.publishedAt) }
                 }
             } catch {
                 await MainActor.run {
@@ -156,17 +197,33 @@ struct OfficialCertificatesView: View {
     private func checkCertificate() {
         guard let release = selectedRelease,
               let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }),
-              let downloadUrl = URL(string: asset.browserDownloadUrl) else {
+              let downloadStr = asset.browserDownloadUrl,
+              let downloadUrl = URL(string: downloadStr) else {
             statusMessage = "Invalid release"
             return
         }
         isChecking = true
         statusMessage = "Downloading..."
         Task {
+            let pat = await getPAT()
+            var downloadRequest = URLRequest(url: downloadUrl)
+            if let pat = pat {
+                downloadRequest.setValue("token \(pat)", forHTTPHeaderField: "Authorization")
+            }
             do {
-                let (tempData, _) = try await URLSession.shared.data(from: downloadUrl)
+                var tempData = Data()
+                var response = URLResponse()
+                (tempData, response) = try await URLSession.shared.data(for: downloadRequest)
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
+                    // Fallback
+                    var fallbackRequest = URLRequest(url: downloadUrl)
+                    (tempData, _) = try await URLSession.shared.data(for: fallbackRequest)
+                }
                 let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
                 try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
+                defer {
+                    try? FileManager.default.removeItem(at: tempDir)
+                }
                 let zipPath = tempDir.appendingPathComponent("temp.zip")
                 try tempData.write(to: zipPath)
                 let extractDir = tempDir.appendingPathComponent("extracted")
@@ -174,29 +231,30 @@ struct OfficialCertificatesView: View {
                 // Find files
                 var p12Urls: [URL] = []
                 var provUrls: [URL] = []
-                if let enumerator = FileManager.default.enumerator(at: extractDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
+                if let enumerator = FileManager.default.enumerator(at: extractDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]) {
                     for case let fileURL as URL in enumerator {
                         let path = fileURL.path
-                        if path.hasSuffix(".p12") {
-                            p12Urls.append(fileURL)
-                        } else if path.hasSuffix(".mobileprovision") {
-                            provUrls.append(fileURL)
+                        if !path.contains("__MACOSX") {
+                            if path.hasSuffix(".p12") {
+                                p12Urls.append(fileURL)
+                            } else if path.hasSuffix(".mobileprovision") {
+                                provUrls.append(fileURL)
+                            }
                         }
                     }
                 }
-                try FileManager.default.removeItem(at: tempDir)
                 guard p12Urls.count == 1, provUrls.count == 1 else {
                     throw NSError(domain: "Extraction", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to extract certificate"])
                 }
                 let p12Url = p12Urls[0]
                 let provUrl = provUrls[0]
-                let p12Data = try Data(contentsOf: p12Url)
-                let provData = try Data(contentsOf: provUrl)
+                let p12DataLocal = try Data(contentsOf: p12Url)
+                let provDataLocal = try Data(contentsOf: provUrl)
                 var successPw: String?
-                for pw in ["Hydrogen", "Sideloadingdotorg"] {
-                    switch CertificatesManager.check(p12Data: p12Data, password: pw, mobileProvisionData: provData) {
+                for pwCandidate in ["Hydrogen", "Sideloadingdotorg"] {
+                    switch CertificatesManager.check(p12Data: p12DataLocal, password: pwCandidate, mobileProvisionData: provDataLocal) {
                     case .success(.success):
-                        successPw = pw
+                        successPw = pwCandidate
                         break
                     default:
                         break
@@ -205,11 +263,11 @@ struct OfficialCertificatesView: View {
                 guard let pw = successPw else {
                     throw NSError(domain: "Password", code: 1, userInfo: [NSLocalizedDescriptionKey: "Password check failed"])
                 }
-                let exp = ProStoreTools.getExpirationDate(provData: provData)
-                let dispName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? cleanName(release.name)
+                let exp = ProStoreTools.getExpirationDate(provData: provDataLocal)
+                let dispName = CertificatesManager.getCertificateName(mobileProvisionData: provDataLocal) ?? cleanName(release.name)
                 await MainActor.run {
-                    self.p12Data = p12Data
-                    self.provData = provData
+                    self.p12Data = p12DataLocal
+                    self.provData = provDataLocal
                     self.password = pw
                     self.displayName = dispName
                     self.expiry = exp
@@ -226,14 +284,15 @@ struct OfficialCertificatesView: View {
     }
     
     private func addCertificate() {
-        guard let p12Data = p12Data,
-              let provData = provData,
-              let pw = password else { return }
+        guard let p12DataLocal = p12Data,
+              let provDataLocal = provData,
+              let pw = password,
+              !displayName.isEmpty else { return }
         isChecking = true
         statusMessage = "Adding..."
         Task {
             do {
-                _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12Data, provData: provData, password: pw, displayName: displayName)
+                _ = try CertificateFileManager.shared.saveCertificate(p12Data: p12DataLocal, provData: provDataLocal, password: pw, displayName: displayName)
                 await MainActor.run {
                     self.statusMessage = "Added successfully"
                     self.isChecking = false
