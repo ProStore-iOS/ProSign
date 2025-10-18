@@ -57,89 +57,7 @@ struct CertificateView: View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                 ForEach(customCertificates) { cert in
-                    ZStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(cert.displayName)
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
-                            if let expiry = certExpiries[cert.folderName] {
-                                let now = Date()
-                                let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
-                                let days = components.day ?? 0
-                                let displayDate = expiry.formattedWithOrdinal()
-                                let expiryText: String
-                                if days > 0 {
-                                    expiryText = "Expires in \(days) days on \(displayDate)"
-                                } else {
-                                    let pastDays = abs(days)
-                                    expiryText = "Expired \(pastDays) days ago on \(displayDate)"
-                                }
-                                Text(expiryText)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                            } else {
-                                Text("No expiry date")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(20)
-                        .frame(maxWidth: .infinity)
-                        .background(backgroundColor(for: cert.folderName))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
-                        )
-                        .onTapGesture {
-                            // Only allow deselection if there are other certificates available
-                            if selectedCert == cert.folderName && customCertificates.count > 1 {
-                                if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
-                                    selectedCert = nextCert.folderName
-                                    UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
-                                }
-                            } else {
-                                selectedCert = cert.folderName
-                                UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
-                            }
-                        }
-                     
-                        HStack {
-                            Button(action: {
-                                // EDIT: trigger identifiable sheet
-                                editingCertificate = cert
-                            }) {
-                                Image(systemName: "pencil")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                                    .padding(8)
-                                    .background(Color(.systemGray6).opacity(0.8))
-                                    .clipShape(Circle())
-                            }
-                         
-                            Spacer()
-                         
-                            Button(action: {
-                                if customCertificates.count > 1 {
-                                    certToDelete = cert
-                                    showingDeleteAlert = true
-                                }
-                            }) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(customCertificates.count > 1 ? .red : .gray)
-                                    .font(.caption)
-                                    .padding(8)
-                                    .background(Color(.systemGray6).opacity(0.8))
-                                    .clipShape(Circle())
-                            }
-                            .disabled(customCertificates.count <= 1)
-                        }
-                        .padding(.top, 12)
-                        .padding(.horizontal, 12)
-                    }
+                    certificateItem(for: cert)
                 }
             }
             .padding()
@@ -188,8 +106,70 @@ struct CertificateView: View {
         }
     }
     
-    private func backgroundColor(for folderName: String) -> Color {
-        guard let expiry = certExpiries[folderName], expiry != nil else {
+    private func certificateItem(for cert: CustomCertificate) -> some View {
+        ZStack(alignment: .top) {
+            certificateContent(for: cert)
+                .onTapGesture {
+                    // Only allow deselection if there are other certificates available
+                    if selectedCert == cert.folderName && customCertificates.count > 1 {
+                        if let nextCert = customCertificates.first(where: { $0.folderName != cert.folderName }) {
+                            selectedCert = nextCert.folderName
+                            UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                        }
+                    } else {
+                        selectedCert = cert.folderName
+                        UserDefaults.standard.set(selectedCert, forKey: "selectedCertificateFolder")
+                    }
+                }
+            certificateButtons(for: cert)
+        }
+    }
+    
+    private func certificateContent(for cert: CustomCertificate) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(cert.displayName)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            if let expiry = certExpiries[cert.folderName] {
+                expiryDisplay(for: expiry)
+            } else {
+                Text("No expiry date")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .background(certificateBackground(for: cert))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
+        )
+    }
+    
+    private func expiryDisplay(for expiry: Date) -> some View {
+        let now = Date()
+        let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
+        let days = components.day ?? 0
+        let displayDate = expiry.formattedWithOrdinal()
+        let expiryText: String
+        if days > 0 {
+            expiryText = "Expires in \(days) days on \(displayDate)"
+        } else {
+            let pastDays = abs(days)
+            expiryText = "Expired \(pastDays) days ago on \(displayDate)"
+        }
+        return Text(expiryText)
+            .font(.caption)
+            .fontWeight(.medium)
+            .foregroundColor(.primary)
+    }
+    
+    private func certificateBackground(for cert: CustomCertificate) -> Color {
+        guard let expiry = certExpiries[cert.folderName], expiry != nil else {
             return Color.clear
         }
         let now = Date()
@@ -203,6 +183,41 @@ struct CertificateView: View {
         default:
             return .green.opacity(0.15)
         }
+    }
+    
+    private func certificateButtons(for cert: CustomCertificate) -> some View {
+        HStack {
+            Button(action: {
+                // EDIT: trigger identifiable sheet
+                editingCertificate = cert
+            }) {
+                Image(systemName: "pencil")
+                    .foregroundColor(.blue)
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color(.systemGray6).opacity(0.8))
+                    .clipShape(Circle())
+            }
+         
+            Spacer()
+         
+            Button(action: {
+                if customCertificates.count > 1 {
+                    certToDelete = cert
+                    showingDeleteAlert = true
+                }
+            }) {
+                Image(systemName: "trash")
+                    .foregroundColor(customCertificates.count > 1 ? .red : .gray)
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color(.systemGray6).opacity(0.8))
+                    .clipShape(Circle())
+            }
+            .disabled(customCertificates.count <= 1)
+        }
+        .padding(.top, 12)
+        .padding(.horizontal, 12)
     }
  
     private func reloadCertificatesAndEnsureSelection() {
