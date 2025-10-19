@@ -156,11 +156,11 @@ struct OfficialCertificatesView: View {
             .onAppear {
                 fetchReleases()
             }
-            .onChange(of: selectedRelease) { oldValue, newValue in
+            .onChange(of: selectedRelease) { newValue in
                 if newValue != nil && !isChecking {
                     clearCertificateData()
                     checkCertificate()
-                } else if oldValue != nil && newValue == nil {
+                } else if newValue == nil {
                     clearCertificateData()
                 }
             }
