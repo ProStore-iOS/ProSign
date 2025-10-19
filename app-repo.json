@@ -21,6 +21,16 @@
       ],
       "versions": [
         {
+          "version": "3.0.0",
+          "date": "2025-10-19T02:44:30+0000",
+          "localizedDescription": "What's new in Version 3.0.0?\n- Update to 3.0.0 - The big one\n- Fix typo in README for upload fields error\n- Add Official Certificates View\n- Use GitHub PAT to access certificates\n- Fix Swift compilation errors in CertificateView.swift\n- Enhance UI feedback and loading states in OfficialCertificatesView\n- Update README with checklist changes for certificates\n- Add another password option\n- Automate certificate validation and refine details layout in OfficialCertificatesView\n- Fix Swift compiler error for ambiguous toolbar modifier\n- Fix SwiftUI toolbar API misuse in OfficialCertificatesView\n- Fix SwiftUI toolbar ambiguity in CertificateView.swift\n- Fixing toolbar ambiguity\n- Replace the .toolbar { ... } block with navigationBarItems(trailing:) — stable, unambiguous, keeps the same UI.\n- Update credits and task list in README.md\n- Fix a pesky bug\n- Only have one candidate in build ipa\n- Fix another bug\n- Fix certificate item alignment by centering VStack in certificateContent to align name and expiry text within the box\n- Update README by removing completed To-Do items",
+          "downloadURL": "https://github.com/ProStore-iOS/ProSign/releases/download/v3.0.0/com.prostoreios.prosign-unsigned-ios.ipa",
+          "size": 3771727,
+          "sha256": "42df73c665d7321b466c95d7969d0d2bca6a221d22aac669262a615bf0a9de1b",
+          "minOSVersion": "16.0",
+          "fullDate": "20251019024430"
+        },
+        {
           "version": "2.6.1",
           "date": "2025-10-18T01:15:25+0000",
           "localizedDescription": "What's new in Version 2.6.1?\n- Add cert status in brackets on the signer view & update to v2.6.1",
