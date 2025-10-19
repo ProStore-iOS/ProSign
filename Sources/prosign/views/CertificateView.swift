@@ -143,7 +143,7 @@ struct OfficialCertificatesView: View {
             }
             .navigationTitle("Official Certificates")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .toolbar(.navigationBarLeading) {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("×") {
                         dismiss()
