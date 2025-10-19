@@ -19,7 +19,7 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 - **SuperGamer474** — Developer  
 - **ChatGPT** — Assistance
 - **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)
-
+- **[loyahdev](https://github.com/loyahdev/)** - Official ProSign [certificates](https://github.com/loyahdev/certificates) provider!
 ---
 
 ## Gallery
@@ -39,4 +39,3 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 - [x] Add expiry dates to certificates.
 - [x] Include an option to add official certificates when adding new certs.
 - [ ] Fix alignment visual bug on certificates page.
-- [ ] Resolve occasional missing file errors in upload fields.
