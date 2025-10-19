@@ -28,7 +28,6 @@ struct Release: Codable, Identifiable, Equatable, Hashable {
     }
     
     var publishedDate: Date {
-        // Will be handled by decoder
         Date()
     }
 }
@@ -149,13 +148,11 @@ struct OfficialCertificatesView: View {
             }
             .navigationTitle("Official Certificates")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("×") {
-                        dismiss()
-                    }
+            .navigationBarItems(leading:
+                Button("×") {
+                    dismiss()
                 }
-            }
+            )
             .onAppear {
                 fetchReleases()
             }
@@ -229,7 +226,6 @@ struct OfficialCertificatesView: View {
                 let (data, response) = try await URLSession.shared.data(for: request)
                 var decodeData = data
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
-                    // Fallback to unauthenticated
                     let fallbackRequest = URLRequest(url: url)
                     let (fallbackData, _) = try await URLSession.shared.data(for: fallbackRequest)
                     decodeData = fallbackData
@@ -288,7 +284,6 @@ struct OfficialCertificatesView: View {
                 var response = URLResponse()
                 (tempData, response) = try await URLSession.shared.data(for: downloadRequest)
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200, pat != nil {
-                    // Fallback
                     let fallbackRequest = URLRequest(url: downloadUrl)
                     (tempData, _) = try await URLSession.shared.data(for: fallbackRequest)
                 }
@@ -681,14 +676,13 @@ struct AddCertificateView: View {
             }
             .navigationTitle(editingCertificate != nil ? "Edit Certificate" : "New Certificate")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("×") {
-                        dismiss()
-                    }
-                    .disabled(isChecking)
+            .navigationBarItems(leading:
+                Button("×") {
+                    dismiss()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                .disabled(isChecking)
+            , trailing:
+                Group {
                     if isChecking {
                         ProgressView()
                     } else {
@@ -698,7 +692,7 @@ struct AddCertificateView: View {
                         .disabled(p12File == nil || provFile == nil)
                     }
                 }
-            }
+            )
             .sheet(item: $activeSheet) { sheetType in
                 CertificateDocumentPicker(kind: sheetType) { url in
                     if sheetType == .p12 {
