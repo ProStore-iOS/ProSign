@@ -2,16 +2,19 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ProStoreTools
 import ZIPFoundation
+
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
     var url: URL?
 }
+
 struct CustomCertificate: Identifiable {
     let id = UUID()
     let displayName: String
     let folderName: String
 }
+
 // MARK: - Release Models
 struct Release: Codable, Identifiable, Equatable, Hashable {
     let id: Int
@@ -29,6 +32,7 @@ struct Release: Codable, Identifiable, Equatable, Hashable {
         Date()
     }
 }
+
 struct Asset: Codable, Hashable, Equatable {
     let name: String
     let browserDownloadUrl: String
@@ -37,6 +41,7 @@ struct Asset: Codable, Hashable, Equatable {
         case name, browserDownloadUrl = "browser_download_url"
     }
 }
+
 // MARK: - Date Extension for Formatting
 extension Date {
     func formattedWithOrdinal() -> String {
@@ -67,6 +72,7 @@ extension Date {
         return "\(number)\(suffix)"
     }
 }
+
 // MARK: - Official Certificates View
 struct OfficialCertificatesView: View {
     @Environment(\.dismiss) private var dismiss
@@ -361,6 +367,7 @@ struct OfficialCertificatesView: View {
         }
     }
 }
+
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
@@ -374,7 +381,6 @@ struct CertificateView: View {
     @State private var newlyAddedFolder: String? = nil
  
     var body: some View {
-        // <-- Removed nested NavigationStack to avoid hiding the title from the parent stack
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                 ForEach(customCertificates) { cert in
@@ -600,6 +606,7 @@ struct CertificateView: View {
         loadExpiries()
     }
 }
+
 // MARK: - Add / Edit View
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
@@ -621,7 +628,6 @@ struct AddCertificateView: View {
     }
  
     var body: some View {
-        // Use a NavigationStack inside the sheet so the sheet has its own nav bar
         NavigationStack {
             Form {
                 Section(header: Text("Files")) {
@@ -684,7 +690,6 @@ struct AddCertificateView: View {
                     }
                     .disabled(isChecking)
                 }
-             
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isChecking {
                         ProgressView()
@@ -715,7 +720,7 @@ struct AddCertificateView: View {
                     hasLoadedForEdit = true
                 }
             }
-        } // NavigationStack
+        }
     }
  
     private func loadForEdit(cert: CustomCertificate) {
@@ -735,6 +740,7 @@ struct AddCertificateView: View {
             displayName = nameStr
         }
     }
+    
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
      
@@ -745,12 +751,11 @@ struct AddCertificateView: View {
             do {
                 var p12Data: Data
                 var provData: Data
-                var localDisplayName = self.displayName // Local copy to modify if needed
+                var localDisplayName = self.displayName
                 if self.editingCertificate != nil {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 } else {
-                    // Call start, but don't guard—proceed to read anyway
                     let p12Scoped = p12URL.startAccessingSecurityScopedResource()
                     let provScoped = provURL.startAccessingSecurityScopedResource()
                     defer {
@@ -766,7 +771,6 @@ struct AddCertificateView: View {
              
                 switch checkResult {
                 case .success(.success):
-                    // Generate displayName from cert if not set
                     if localDisplayName.isEmpty {
                         localDisplayName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? "Custom Certificate"
                     }
