@@ -116,7 +116,7 @@ jobs:
           # Try to read cached objectVersion from file
           CACHE_FILE=".object_version_cache"
           CACHED_VERSION=""
-          candidates=(77 70 63 60 56 55)
+          candidates=(77)
           
           if [ -f "$CACHE_FILE" ]; then
             CACHED_VERSION=$(cat "$CACHE_FILE" | tr -d '\n')
