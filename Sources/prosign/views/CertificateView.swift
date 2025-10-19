@@ -390,24 +390,22 @@ struct CertificateView: View {
             .padding()
         }
         .background(Color(.systemGray6))
-        .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        showAddCertificateSheet = true
-                    } label: {
-                        Label("Add from Files", systemImage: "folder.badge.plus")
-                    }
-                    Button {
-                        showOfficialSheet = true
-                    } label: {
-                        Label("Add from Official", systemImage: "globe")
-                    }
+        .navigationBarItems(trailing:
+            Menu {
+                Button {
+                    showAddCertificateSheet = true
                 } label: {
-                    Image(systemName: "plus")
+                    Label("Add from Files", systemImage: "folder.badge.plus")
                 }
+                Button {
+                    showOfficialSheet = true
+                } label: {
+                    Label("Add from Official", systemImage: "globe")
+                }
+            } label: {
+                Image(systemName: "plus")
             }
-        }
+        )
         // ADD sheet (new certificate only)
         .sheet(isPresented: $showAddCertificateSheet, onDismiss: {
             reloadCertificatesAndEnsureSelection()
