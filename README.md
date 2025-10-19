@@ -35,11 +35,11 @@ We are now focusing on **ProStore**, the next-level app experience for iOS users
 
 ---
 
-<a href="https://www.star-history.com/#ProStore-iOS/ProSign&legend=top-left">
+<a href="https://www.star-history.com/#ProStore-iOS/ProSign&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=timeline&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=timeline&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ProStore-iOS/ProSign&type=date&legend=top-left" />
  </picture>
 </a>
 
