@@ -6,20 +6,30 @@ ProSign app source URL: https://prostore-ios.github.io/apps.json
 
 ---
 
+## Release Info
+### v3.0.0 – Last Major Update  
+This is the final major update for ProSign!  
+From now on, only **patches and bug fixes** will be released.  
+
+We are now focusing on **ProStore**, the next-level app experience for iOS users.  
+
+---
+
 ## Install ProSign
 
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=altstore">Add to AltStore</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=sidestore">Add to SideStore</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=esign">Add to ESign</a>  
-- <a href="https://ProStore-iOS.github.io/sourceRedirect.html?app=scarlet">Add to Scarlet</a>
+- <a href="https://ProStore-IOS.github.io/sourceRedirect.html?app=altstore">Add to AltStore</a>  
+- <a href="https://ProStore-IOS.github.io/sourceRedirect.html?app=sidestore">Add to SideStore</a>  
+- <a href="https://ProStore-IOS.github.io/sourceRedirect.html?app=esign">Add to ESign</a>  
+- <a href="https://ProStore-IOS.github.io/sourceRedirect.html?app=scarlet">Add to Scarlet</a>
 
 ---
 
 ## Credits
 - **SuperGamer474** — Developer  
-- **ChatGPT** — Assistance
-- **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)
+- **ChatGPT** — Assistance  
+- **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)  
 - **[loyahdev](https://github.com/loyahdev/)** - Official ProSign [certificates](https://github.com/loyahdev/certificates) provider!
+
 ---
 
 ## Gallery
