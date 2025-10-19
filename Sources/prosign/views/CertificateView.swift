@@ -294,7 +294,7 @@ struct OfficialCertificatesView: View {
                 let p12DataLocal = try Data(contentsOf: p12Url)
                 let provDataLocal = try Data(contentsOf: provUrl)
                 var successPw: String?
-                for pwCandidate in ["Hydrogen", "Sideloadingdotorg"] {
+                for pwCandidate in ["Hydrogen", "nocturnacerts", "Sideloadingdotorg"] {
                     switch CertificatesManager.check(p12Data: p12DataLocal, password: pwCandidate, mobileProvisionData: provDataLocal) {
                     case .success(.success):
                         successPw = pwCandidate
