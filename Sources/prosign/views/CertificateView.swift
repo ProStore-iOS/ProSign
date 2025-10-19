@@ -391,7 +391,7 @@ struct CertificateView: View {
         }
         .background(Color(.systemGray6))
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
                         showAddCertificateSheet = true
