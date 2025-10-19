@@ -124,20 +124,14 @@ struct OfficialCertificatesView: View {
                 if let release = selectedRelease {
                     Section("Details") {
                         Text("Tag: \(release.tagName)")
+                        if !statusMessage.isEmpty {
+                            Text(statusMessage)
+                                .foregroundColor(statusColor)
+                        }
                         Text("Published: \(dateFormatter.string(from: isoDate(string: release.publishedAt)))")
-                    }
-                }
-                Section {
-                    Button("Check Certificate") {
-                        checkCertificate()
-                    }
-                    .disabled(selectedRelease == nil || isChecking)
-                    if !statusMessage.isEmpty {
-                        Text(statusMessage)
-                            .foregroundColor(statusColor)
-                    }
-                    if let expiry = expiry {
-                        expiryDisplay(for: expiry)
+                        if let exp = expiry {
+                            expiryDisplay(for: exp)
+                        }
                     }
                 }
                 Section {
@@ -159,7 +153,24 @@ struct OfficialCertificatesView: View {
             .onAppear {
                 fetchReleases()
             }
+            .onChange(of: selectedRelease) { oldValue, newValue in
+                if newValue != nil && !isChecking {
+                    clearCertificateData()
+                    checkCertificate()
+                } else if oldValue != nil && newValue == nil {
+                    clearCertificateData()
+                }
+            }
         }
+    }
+    
+    private func clearCertificateData() {
+        statusMessage = ""
+        expiry = nil
+        p12Data = nil
+        provData = nil
+        password = nil
+        displayName = ""
     }
     
     private func expiryDisplay(for expiry: Date) -> some View {
@@ -294,7 +305,7 @@ struct OfficialCertificatesView: View {
                 let p12DataLocal = try Data(contentsOf: p12Url)
                 let provDataLocal = try Data(contentsOf: provUrl)
                 var successPw: String?
-                for pwCandidate in ["Hydrogen", "nocturnacerts", "Sideloadingdotorg"] {
+                for pwCandidate in ["Hydrogen", "Sideloadingdotorg", "nocturnacerts"] {
                     switch CertificatesManager.check(p12Data: p12DataLocal, password: pwCandidate, mobileProvisionData: provDataLocal) {
                     case .success(.success):
                         successPw = pwCandidate
