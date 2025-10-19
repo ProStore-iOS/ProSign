@@ -74,6 +74,7 @@ struct OfficialCertificatesView: View {
     @State private var selectedRelease: Release? = nil
     @State private var statusMessage = ""
     @State private var isChecking = false
+    @State private var isLoadingReleases = true
     @State private var p12Data: Data? = nil
     @State private var provData: Data? = nil
     @State private var password: String? = nil
@@ -82,6 +83,16 @@ struct OfficialCertificatesView: View {
     
     private var isSuccess: Bool {
         statusMessage.contains("Success")
+    }
+    
+    private var statusColor: Color {
+        if statusMessage.contains("Downloading") {
+            return .yellow
+        } else if isSuccess {
+            return .green
+        } else {
+            return .red
+        }
     }
     
     private let dateFormatter: DateFormatter = {
@@ -95,9 +106,13 @@ struct OfficialCertificatesView: View {
             Form {
                 Section("Select Official Certificate") {
                     Picker("Certificate", selection: $selectedRelease) {
-                        Text("Select a certificate").tag(nil as Release?)
-                        ForEach(releases) { release in
-                            Text(cleanName(release.name)).tag(release as Release?)
+                        if isLoadingReleases {
+                            Text("-- Loading --").tag(nil as Release?)
+                        } else {
+                            Text("-- Select a certificate --").tag(nil as Release?)
+                            ForEach(releases) { release in
+                                Text(cleanName(release.name)).tag(release as Release?)
+                            }
                         }
                     }
                 }
@@ -119,7 +134,10 @@ struct OfficialCertificatesView: View {
                     .disabled(selectedRelease == nil || isChecking)
                     if !statusMessage.isEmpty {
                         Text(statusMessage)
-                            .foregroundColor(isSuccess ? .green : .red)
+                            .foregroundColor(statusColor)
+                    }
+                    if let expiry = expiry {
+                        expiryDisplay(for: expiry)
                     }
                 }
                 Section {
@@ -142,6 +160,25 @@ struct OfficialCertificatesView: View {
                 fetchReleases()
             }
         }
+    }
+    
+    private func expiryDisplay(for expiry: Date) -> some View {
+        let now = Date()
+        let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
+        let days = components.day ?? 0
+        let displayDate = expiry.formattedWithOrdinal()
+        let expiryText: String
+        let expiryColor: Color
+        if days > 0 {
+            expiryText = "Expires on the \(displayDate)"
+            expiryColor = .green
+        } else {
+            expiryText = "Expired on the \(displayDate)"
+            expiryColor = .red
+        }
+        return Text(expiryText)
+            .foregroundColor(expiryColor)
+            .font(.caption)
     }
     
     private func isoDate(string: String) -> Date {
@@ -185,10 +222,12 @@ struct OfficialCertificatesView: View {
                 let decoded = try decoder.decode([Release].self, from: decodeData)
                 await MainActor.run {
                     self.releases = decoded.sorted { isoDate(string: $0.publishedAt) > isoDate(string: $1.publishedAt) }
+                    self.isLoadingReleases = false
                 }
             } catch {
                 await MainActor.run {
                     self.statusMessage = "Failed to fetch releases: \(error.localizedDescription)"
+                    self.isLoadingReleases = false
                 }
             }
         }
@@ -275,7 +314,7 @@ struct OfficialCertificatesView: View {
                     self.password = pw
                     self.displayName = dispName
                     self.expiry = exp
-                    self.statusMessage = "Success: Ready to add \(dispName), expires \(exp?.formattedWithOrdinal() ?? "Unknown")"
+                    self.statusMessage = "Success: Ready to add \(dispName)"
                     self.isChecking = false
                 }
             } catch {
