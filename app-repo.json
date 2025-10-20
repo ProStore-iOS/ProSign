@@ -2,7 +2,7 @@
   "name": "Official ProStore Repo",
   "identifier": "com.prostoreios.prostore.repo",
   "sourceURL": "https://ProStore-iOS.github.io/apps.json",
-  "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
+  "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProStore-iOS.github.io/refs/heads/main/ProStore_icon.png",
   "website": "https://ProStore-iOS.github.io",
   "subtitle": "The BEST alternative app store for iOS!",
   "apps": [
@@ -10,7 +10,7 @@
       "name": "ProSign",
       "bundleIdentifier": "com.prostoreios.prosign",
       "developerName": "ProStore iOS",
-      "localizedDescription": "The BEST alternative app store for iOS!",
+      "localizedDescription": "The best on-device .ipa signer for iOS!",
       "iconURL": "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png",
       "screenshotURLs": [
         "https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png",
