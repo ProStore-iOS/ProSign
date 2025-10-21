@@ -6,7 +6,6 @@ on:
     branches: [ main ]
     paths-ignore:
       - 'README.md'
-      - 'app-repo.json'
       - 'gallery/**'
       - 'website/**'
       - '.github/**'
@@ -389,20 +388,15 @@ jobs:
             --repo "$GITHUB_REPOSITORY"
         shell: bash
 
-  create-app-source-json:
-    name: Update App Source JSON
+  update-prostore-repo-json:
+    name: Update ProStore Repo JSON
     needs: build-unsigned-ipa
     if: needs.build-unsigned-ipa.outputs.release_exists == 'false'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    env:
+      VERSION: ${{ needs.build-unsigned-ipa.outputs.version }}
+      CHANGELOG: ${{ needs.build-unsigned-ipa.outputs.changelog }}
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
       - name: Install jq
         run: |
           # jq
@@ -420,16 +414,13 @@ jobs:
           name: com.prostoreios.prosign-unsigned-ios.ipa
           path: build
 
-      - name: Update App Repo
+      - name: Update Apps JSON in Pages Repo
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.build-unsigned-ipa.outputs.version }}
-          CHANGELOG: ${{ needs.build-unsigned-ipa.outputs.changelog }}
+          PAGES_PAT: ${{ secrets.PAGES_PAT }}
         run: |
           set -e
           IPA_PATH="$PWD/build/com.prostoreios.prosign-unsigned-ios.ipa"
           DOWNLOAD_URL="https://github.com/ProStore-iOS/ProSign/releases/download/v$VERSION/com.prostoreios.prosign-unsigned-ios.ipa"
-          REPO_FILE="app-repo.json"
 
           if [ -f "$IPA_PATH" ]; then
             IPA_SIZE=$(stat -c%s "$IPA_PATH")
@@ -449,7 +440,16 @@ jobs:
           DEVNAME="ProStore iOS"
           SCREENSHOTS='["https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot1.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot2.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot3.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot4.png","https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/gallery/Screenshot5.png"]'
 
-          # Create base repo JSON safely (single command, YAML-friendly)
+          PAGES_REPO="ProStore-iOS/ProStore-iOS.github.io"
+          PAGES_DIR=$(mktemp -d)
+
+          echo "Cloning pages repo (masked token)..."
+          git clone --depth 1 "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" "$PAGES_DIR"
+
+          cd "$PAGES_DIR"
+          REPO_FILE="apps.json"
+
+          # Create base repo JSON if missing (first run only)
           if [ ! -f "$REPO_FILE" ]; then
             jq -n --arg icon "$ICON_URL" '{
               name: "Official ProStore Repo",
@@ -476,8 +476,8 @@ jobs:
             --argjson size "$IPA_SIZE" \
             '{version: $version, date: $date, localizedDescription: $desc, downloadURL: $url, size: $size, sha256: $sha, minOSVersion: $minos, fullDate: $fulldate}')
 
-          # Single-line jq filter (YAML-friendly)
-          JQ_QUERY='if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then .apps |= map( if ((.bundleIdentifier // .bundleID) == $bundle) then ( { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } ) else . end ) else .apps += [ { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots, "versions": [ $newVer ] } ] end'
+          # Single-line jq filter (YAML-friendly, with .apps //= [] for robustness)
+          JQ_QUERY='(.apps //= []) | if ( .apps | map(.bundleIdentifier // .bundleID) | index($bundle) ) then .apps |= map( if ((.bundleIdentifier // .bundleID) == $bundle) then ( { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots } + { "versions": ( [ $newVer ] + ( .versions // [] ) ) } ) else . end ) else .apps += [ { "name": $name, "bundleIdentifier": $bundle, "developerName": $dev, "localizedDescription": $appdesc, "iconURL": $icon, "screenshotURLs": $screenshots, "versions": [ $newVer ] } ] end'
 
           # Update or create the app entry (pass screenshots as argjson directly)
           jq --argjson newVer "$NEW_VERSION" \
@@ -489,47 +489,11 @@ jobs:
              --argjson screenshots "$SCREENSHOTS" \
              "$JQ_QUERY" "$REPO_FILE" > "$TMP" && mv "$TMP" "$REPO_FILE"
 
-          # Safe commit & push
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add "$REPO_FILE"
-          git commit -m "Update ProStore app repo to v$VERSION" || echo "No changes to commit"
-
-          git fetch origin main --quiet
-          if git rev-parse --verify origin/main >/dev/null 2>&1; then
-            if git rebase origin/main; then
-              echo "Rebase succeeded, pushing changes..."
-              git push origin HEAD:main
-            else
-              echo "Rebase failed — aborting rebase and skipping push."
-              git rebase --abort || true
-            fi
-          else
-            git push origin HEAD:main
-          fi
-        shell: bash
-
-      - name: Push to GitHub Pages
-        env:
-          PAGES_PAT: ${{ secrets.PAGES_PAT }}
-        run: |
-          set -e
-          VERSION="${{ needs.build-unsigned-ipa.outputs.version }}"
-          PAGES_REPO="ProStore-iOS/ProStore-iOS.github.io"
-          PAGES_DIR=$(mktemp -d)
-
-          echo "Cloning pages repo (masked token)..."
-          git clone --depth 1 "https://x-access-token:${PAGES_PAT}@github.com/${PAGES_REPO}.git" "$PAGES_DIR"
-
-          echo "Copying app-repo.json -> apps.json in pages repo"
-          cp app-repo.json "$PAGES_DIR/apps.json"
-
-          cd "$PAGES_DIR"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Only commit if there's a change
-          git add apps.json
+          git add "$REPO_FILE"
           if git diff --quiet --cached; then
             echo "No changes to apps.json — nothing to commit/push."
             exit 0
