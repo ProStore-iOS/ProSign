@@ -434,7 +434,7 @@ jobs:
           MIN_OS="16.0"
           FULL_DATE=$(date +%Y%m%d%H%M%S)
 
-          ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProSign/refs/heads/main/Sources/prosign/Assets.xcassets/AppIcon.appiconset/Icon-1024.png"
+          ICON_URL="https://raw.githubusercontent.com/ProStore-iOS/ProStore-iOS.github.io/refs/heads/main/ProSign_icon.png"
           BUNDLE="com.prostoreios.prosign"
           META_DESC="The BEST alternative app store for iOS!"
           DEVNAME="ProStore iOS"
