@@ -46,8 +46,8 @@ We are now focusing on **ProStore**, the next-level app experience for iOS users
 ---
 
 ## Credits
-- **SuperGamer474** — Developer  
-- **ChatGPT** — Assistance  
+- **SuperGamer474** - Developer  
+- **ChatGPT** - Assistance  
 - **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)  
 - **[loyahdev](https://github.com/loyahdev/)** - Official ProSign [certificates](https://github.com/loyahdev/certificates) provider!
 
