@@ -2,10 +2,6 @@ import SwiftUI
 import Security
 import Foundation
 
-let kSecOIDX509V1ValidityNotAfter = "2.5.29.24" as CFString
-let kSecPropertyKeyValue = "value" as CFString
-let errSecSuccess: OSStatus = 0
-
 struct Credit: Identifiable {
     var id = UUID()
     var name: String
@@ -118,16 +114,37 @@ final class SigningInfoProvider: ObservableObject {
             self.certCommonName = name
         }
 
-        // Try to get NotAfter (expiry) using SecCertificateCopyValues (available on iOS)
-        var valuesRef: CFDictionary?
-        let oids = [kSecOIDX509V1ValidityNotAfter] as CFArray
-        let status = SecCertificateCopyValues(secCert, oids, &valuesRef)
-        if status == errSecSuccess, let values = valuesRef as? [String: Any],
-           let notAfterEntry = values[kSecOIDX509V1ValidityNotAfter as String] as? [String: Any],
-           let expiry = notAfterEntry[kSecPropertyKeyValue as String] as? Date {
-            self.certExpiry = expiry
+        // Parse expiry date from DER data (iOS-compatible method)
+        guard let decodedString = String(data: der, encoding: .ascii) else {
+            self.certExpiry = nil
+            return
+        }
+
+        var notValidBeforeDate = ""
+        var notValidAfterDate = ""
+        var foundWWDRCA = false
+
+        decodedString.enumerateLines { line, _ in
+            if foundWWDRCA && (notValidBeforeDate.isEmpty || notValidAfterDate.isEmpty) {
+                let certificateData = line.prefix(13)
+                if notValidBeforeDate.isEmpty && !certificateData.isEmpty {
+                    notValidBeforeDate = String(certificateData)
+                } else if notValidAfterDate.isEmpty && !certificateData.isEmpty {
+                    notValidAfterDate = String(certificateData)
+                }
+            }
+            if line.contains("Apple Worldwide Developer Relations Certification Authority") {
+                foundWWDRCA = true
+            }
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyMMddHHmmss'Z'"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0) // UTC
+
+        if let notAfter = formatter.date(from: notValidAfterDate) {
+            self.certExpiry = notAfter
         } else {
-            // If SecCertificateCopyValues didn't return a Date (rare), leave nil.
             self.certExpiry = nil
         }
     }
