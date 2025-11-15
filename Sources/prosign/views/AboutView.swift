@@ -1,6 +1,10 @@
-// AboutView.swift
 import SwiftUI
 import Security
+import Foundation
+
+let kSecOIDX509V1ValidityNotAfter = "2.5.29.24" as CFString
+let kSecPropertyKeyValue = "value" as CFString
+let errSecSuccess: OSStatus = 0
 
 struct Credit: Identifiable {
     var id = UUID()
@@ -14,10 +18,8 @@ struct Credit: Identifiable {
 final class SigningInfoProvider: ObservableObject {
     @Published var certCommonName: String = "Unknown"
     @Published var certExpiry: Date? = nil
-
     @Published var provName: String = "Unknown"
     @Published var provExpiry: Date? = nil
-
     @Published var errorMessage: String? = nil
 
     init() {
@@ -218,14 +220,17 @@ struct AboutView: View {
                         if signingInfo.certCommonName != "Unknown" || signingInfo.certExpiry != nil || signingInfo.provName != "Unknown" || signingInfo.provExpiry != nil {
                             VStack(spacing: 2) {
                                 Divider()
+
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Signing certificate")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
+
                                         Text(signingInfo.certCommonName)
                                             .font(.caption2)
                                             .lineLimit(1)
+
                                         if let certExpiry = signingInfo.certExpiry {
                                             Text("Expires: \(dateFormatter.string(from: certExpiry))")
                                                 .font(.caption2)
@@ -236,6 +241,7 @@ struct AboutView: View {
                                                 .foregroundColor(.secondary)
                                         }
                                     }
+
                                     Spacer()
                                 }
                                 .padding(.top, 6)
@@ -245,9 +251,11 @@ struct AboutView: View {
                                         Text("Provisioning profile")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
+
                                         Text(signingInfo.provName)
                                             .font(.caption2)
                                             .lineLimit(1)
+
                                         if let provExpiry = signingInfo.provExpiry {
                                             Text("Expires: \(dateFormatter.string(from: provExpiry))")
                                                 .font(.caption2)
@@ -258,6 +266,7 @@ struct AboutView: View {
                                                 .foregroundColor(.secondary)
                                         }
                                     }
+
                                     Spacer()
                                 }
 
@@ -277,6 +286,7 @@ struct AboutView: View {
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
+
                                     Spacer()
                                 }
                                 .padding(.top, 6)
@@ -334,6 +344,7 @@ struct CreditRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(credit.name)
                     .font(.body)
+
                 Text(credit.role)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
