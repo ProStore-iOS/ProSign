@@ -25,104 +25,108 @@ final class SigningInfoProvider: ObservableObject {
     }
 
     func fetchAll() async {
-        fetchSigningCertificate()
-        fetchEmbeddedProvision()
+        await fetchEmbeddedProvisionAndCert()
     }
 
-    // MARK: - Certificate (from code signature)
-    private func fetchSigningCertificate() {
-        var code: SecCode?
-        let status = SecCodeCopySelf([], &code)
-        guard status == errSecSuccess, let codeUnwrapped = code else {
-            self.errorMessage = "Could not read code object"
-            return
-        }
-
-        var signingInfoRef: CFDictionary?
-        let infoStatus = SecCodeCopySigningInformation(codeUnwrapped, SecCSFlags(rawValue: kSecCSSigningInformation), &signingInfoRef)
-        if infoStatus != errSecSuccess {
-            // Try with empty flags if the constant isn't available
-            let _ = SecCodeCopySigningInformation(codeUnwrapped, [], &signingInfoRef)
-        }
-
-        guard let signingInfo = signingInfoRef as? [String: Any],
-              let certs = signingInfo[kSecCodeInfoCertificates as String] as? [SecCertificate],
-              let firstCert = certs.first
-        else {
-            self.errorMessage = "No certificate in signing info"
-            return
-        }
-
-        // Common name / subject summary
-        if let name = SecCertificateCopySubjectSummary(firstCert) as String? {
-            self.certCommonName = name
-        }
-
-        // NotAfter (expiry)
-        var valuesRef: CFDictionary?
-        let oids = [kSecOIDX509V1ValidityNotAfter] as CFArray
-        if SecCertificateCopyValues(firstCert, oids, &valuesRef) == errSecSuccess,
-           let values = valuesRef as? [String: Any],
-           let notAfterEntry = values[kSecOIDX509V1ValidityNotAfter as String] as? [String: Any],
-           let expiry = notAfterEntry[kSecPropertyKeyValue as String] as? Date {
-            self.certExpiry = expiry
-        } else {
-            // fallback: try to parse summary data (rare)
-            self.certExpiry = nil
-        }
-    }
-
-    // MARK: - embedded.mobileprovision (from bundle)
-    private func fetchEmbeddedProvision() {
+    /// Reads embedded.mobileprovision, extracts provisioning Name + ExpirationDate,
+    /// and also extracts the first DeveloperCertificates entry (DER) and reads its CN + expiry.
+    private func fetchEmbeddedProvisionAndCert() async {
         guard let provPath = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") else {
-            // Not found (e.g. App Store app or simulator). Keep defaults.
+            // Not found: App Store builds and the Simulator typically won't include it.
+            self.errorMessage = nil
             return
         }
 
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: provPath))
-            guard let str = String(data: data, encoding: .utf8) else { return }
+            guard let str = String(data: data, encoding: .utf8) else {
+                self.errorMessage = "embedded.mobileprovision decoding failed"
+                return
+            }
 
-            // The mobileprovision is a CMS envelope containing a plist. Extract plist XML segment.
-            if let startRange = str.range(of: "<?xml"),
-               let endRange = str.range(of: "</plist>") {
-                let plistString = String(str[startRange.lowerBound...endRange.upperBound])
-                if let plistData = plistString.data(using: .utf8) {
-                    let plist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
-                    if let dict = plist as? [String: Any] {
-                        if let name = dict["Name"] as? String {
-                            self.provName = name
-                        }
-                        if let expiry = dict["ExpirationDate"] as? Date {
-                            self.provExpiry = expiry
-                        } else if let expiryStr = dict["ExpirationDate"] as? String {
-                            // Some formats might return a string — try ISO8601
-                            let df = ISO8601DateFormatter()
-                            if let d = df.date(from: expiryStr) {
-                                self.provExpiry = d
-                            }
-                        }
-                    }
+            // Extract the plist XML segment out of the CMS envelope
+            guard let startRange = str.range(of: "<?xml"),
+                  let endRange = str.range(of: "</plist>") else {
+                // fallback: try to find plist bytes inside the raw data
+                if let start = data.range(of: Data("<?xml".utf8)),
+                   let end = data.range(of: Data("</plist>".utf8)) {
+                    let plistData = data[start.lowerBound...end.upperBound]
+                    try parseProvisionPlist(Data(plistData))
+                } else {
+                    self.errorMessage = "No plist found inside embedded.mobileprovision"
                 }
+                return
+            }
+
+            let plistString = String(str[startRange.lowerBound...endRange.upperBound])
+            if let plistData = plistString.data(using: .utf8) {
+                try parseProvisionPlist(plistData)
             } else {
-                // if no plist detected, try scanning bytes for plist start/end bytes
-                // (some profiles are binary or slightly different) — try a Data approach
-                if let plistRangeStart = data.range(of: Data("<?xml".utf8)),
-                   let plistRangeEnd = data.range(of: Data("</plist>".utf8)) {
-                    let plistData = data[plistRangeStart.lowerBound...plistRangeEnd.upperBound]
-                    let plist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
-                    if let dict = plist as? [String: Any] {
-                        if let name = dict["Name"] as? String {
-                            self.provName = name
-                        }
-                        if let expiry = dict["ExpirationDate"] as? Date {
-                            self.provExpiry = expiry
-                        }
-                    }
-                }
+                self.errorMessage = "Failed to re-encode plist string"
             }
         } catch {
             self.errorMessage = "Failed to read embedded.mobileprovision: \(error.localizedDescription)"
+        }
+    }
+
+    private func parseProvisionPlist(_ plistData: Data) throws {
+        let plist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
+        guard let dict = plist as? [String: Any] else { return }
+
+        // Provisioning info
+        if let name = dict["Name"] as? String {
+            self.provName = name
+        }
+        if let expiry = dict["ExpirationDate"] as? Date {
+            self.provExpiry = expiry
+        } else if let expiryStr = dict["ExpirationDate"] as? String {
+            // attempt ISO8601 parse as a fallback
+            let df = ISO8601DateFormatter()
+            if let d = df.date(from: expiryStr) { self.provExpiry = d }
+        }
+
+        // DeveloperCertificates -> array of DER blobs (NSData)
+        if let devCerts = dict["DeveloperCertificates"] as? [Any], !devCerts.isEmpty {
+            // Try the first certificate
+            for raw in devCerts {
+                if let certData = raw as? Data {
+                    processCertificateDER(certData)
+                    break
+                } else if let nsdata = raw as? NSData {
+                    processCertificateDER(nsdata as Data)
+                    break
+                } else if let b64 = raw as? String, let decoded = Data(base64Encoded: b64) {
+                    processCertificateDER(decoded)
+                    break
+                }
+            }
+        } else {
+            // No developer certs in the profile (possible for certain distribution types)
+        }
+    }
+
+    private func processCertificateDER(_ der: Data) {
+        guard let secCert = SecCertificateCreateWithData(nil, der as CFData) else {
+            self.errorMessage = "Failed to create SecCertificate from DER"
+            return
+        }
+
+        // Common name / summary (works on iOS)
+        if let name = SecCertificateCopySubjectSummary(secCert) as String? {
+            self.certCommonName = name
+        }
+
+        // Try to get NotAfter (expiry) using SecCertificateCopyValues (available on iOS)
+        var valuesRef: CFDictionary?
+        let oids = [kSecOIDX509V1ValidityNotAfter] as CFArray
+        let status = SecCertificateCopyValues(secCert, oids, &valuesRef)
+        if status == errSecSuccess, let values = valuesRef as? [String: Any],
+           let notAfterEntry = values[kSecOIDX509V1ValidityNotAfter as String] as? [String: Any],
+           let expiry = notAfterEntry[kSecPropertyKeyValue as String] as? Date {
+            self.certExpiry = expiry
+        } else {
+            // If SecCertificateCopyValues didn't return a Date (rare), leave nil.
+            self.certExpiry = nil
         }
     }
 }
@@ -212,7 +216,6 @@ struct AboutView: View {
                             .foregroundColor(.secondary)
 
                         if signingInfo.certCommonName != "Unknown" || signingInfo.certExpiry != nil || signingInfo.provName != "Unknown" || signingInfo.provExpiry != nil {
-                            // Show certificate + provisioning info
                             VStack(spacing: 2) {
                                 Divider()
                                 HStack {
@@ -258,7 +261,6 @@ struct AboutView: View {
                                     Spacer()
                                 }
 
-                                // Show a match / mismatch indicator
                                 HStack {
                                     if let certExpiry = signingInfo.certExpiry, let provExpiry = signingInfo.provExpiry {
                                         if Calendar.current.compare(certExpiry, to: provExpiry, toGranularity: .second) == .orderedSame {
@@ -271,7 +273,6 @@ struct AboutView: View {
                                                 .foregroundColor(.yellow)
                                         }
                                     } else {
-                                        // Can't fully compare
                                         Label("Comparison unavailable", systemImage: "questionmark.circle")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
