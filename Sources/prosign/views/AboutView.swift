@@ -1,6 +1,5 @@
+// AboutView.swift
 import SwiftUI
-import Security
-import Foundation
 
 struct Credit: Identifiable {
     var id = UUID()
@@ -10,149 +9,7 @@ struct Credit: Identifiable {
     var avatarURL: URL
 }
 
-@MainActor
-final class SigningInfoProvider: ObservableObject {
-    @Published var certCommonName: String = "Unknown"
-    @Published var certExpiry: Date? = nil
-    @Published var provName: String = "Unknown"
-    @Published var provExpiry: Date? = nil
-    @Published var errorMessage: String? = nil
-
-    init() {
-        Task { await fetchAll() }
-    }
-
-    func fetchAll() async {
-        await fetchEmbeddedProvisionAndCert()
-    }
-
-    /// Reads embedded.mobileprovision, extracts provisioning Name + ExpirationDate,
-    /// and also extracts the first DeveloperCertificates entry (DER) and reads its CN + expiry.
-    private func fetchEmbeddedProvisionAndCert() async {
-        guard let provPath = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") else {
-            // Not found: App Store builds and the Simulator typically won't include it.
-            self.errorMessage = nil
-            return
-        }
-
-        do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: provPath))
-            guard let str = String(data: data, encoding: .utf8) else {
-                self.errorMessage = "embedded.mobileprovision decoding failed"
-                return
-            }
-
-            // Extract the plist XML segment out of the CMS envelope
-            guard let startRange = str.range(of: "<?xml"),
-                  let endRange = str.range(of: "</plist>") else {
-                // fallback: try to find plist bytes inside the raw data
-                if let start = data.range(of: Data("<?xml".utf8)),
-                   let end = data.range(of: Data("</plist>".utf8)) {
-                    let plistData = data[start.lowerBound...end.upperBound]
-                    try parseProvisionPlist(Data(plistData))
-                } else {
-                    self.errorMessage = "No plist found inside embedded.mobileprovision"
-                }
-                return
-            }
-
-            let plistString = String(str[startRange.lowerBound...endRange.upperBound])
-            if let plistData = plistString.data(using: .utf8) {
-                try parseProvisionPlist(plistData)
-            } else {
-                self.errorMessage = "Failed to re-encode plist string"
-            }
-        } catch {
-            self.errorMessage = "Failed to read embedded.mobileprovision: \(error.localizedDescription)"
-        }
-    }
-
-    private func parseProvisionPlist(_ plistData: Data) throws {
-        let plist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
-        guard let dict = plist as? [String: Any] else { return }
-
-        // Provisioning info
-        if let name = dict["Name"] as? String {
-            self.provName = name
-        }
-        if let expiry = dict["ExpirationDate"] as? Date {
-            self.provExpiry = expiry
-        } else if let expiryStr = dict["ExpirationDate"] as? String {
-            // attempt ISO8601 parse as a fallback
-            let df = ISO8601DateFormatter()
-            if let d = df.date(from: expiryStr) { self.provExpiry = d }
-        }
-
-        // DeveloperCertificates -> array of DER blobs (NSData)
-        if let devCerts = dict["DeveloperCertificates"] as? [Any], !devCerts.isEmpty {
-            // Try the first certificate
-            for raw in devCerts {
-                if let certData = raw as? Data {
-                    processCertificateDER(certData)
-                    break
-                } else if let nsdata = raw as? NSData {
-                    processCertificateDER(nsdata as Data)
-                    break
-                } else if let b64 = raw as? String, let decoded = Data(base64Encoded: b64) {
-                    processCertificateDER(decoded)
-                    break
-                }
-            }
-        } else {
-            // No developer certs in the profile (possible for certain distribution types)
-        }
-    }
-
-    private func processCertificateDER(_ der: Data) {
-        guard let secCert = SecCertificateCreateWithData(nil, der as CFData) else {
-            self.errorMessage = "Failed to create SecCertificate from DER"
-            return
-        }
-
-        // Common name / summary (works on iOS)
-        if let name = SecCertificateCopySubjectSummary(secCert) as String? {
-            self.certCommonName = name
-        }
-
-        // Parse expiry date from DER data (iOS-compatible method)
-        guard let decodedString = String(data: der, encoding: .ascii) else {
-            self.certExpiry = nil
-            return
-        }
-
-        var notValidBeforeDate = ""
-        var notValidAfterDate = ""
-        var foundWWDRCA = false
-
-        decodedString.enumerateLines { line, _ in
-            if foundWWDRCA && (notValidBeforeDate.isEmpty || notValidAfterDate.isEmpty) {
-                let certificateData = line.prefix(13)
-                if notValidBeforeDate.isEmpty && !certificateData.isEmpty {
-                    notValidBeforeDate = String(certificateData)
-                } else if notValidAfterDate.isEmpty && !certificateData.isEmpty {
-                    notValidAfterDate = String(certificateData)
-                }
-            }
-            if line.contains("Apple Worldwide Developer Relations Certification Authority") {
-                foundWWDRCA = true
-            }
-        }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyMMddHHmmss'Z'"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0) // UTC
-
-        if let notAfter = formatter.date(from: notValidAfterDate) {
-            self.certExpiry = notAfter
-        } else {
-            self.certExpiry = nil
-        }
-    }
-}
-
 struct AboutView: View {
-    @StateObject private var signingInfo = SigningInfoProvider()
-
     private let credits: [Credit] = [
         Credit(
             name: "SuperGamer474",
@@ -188,17 +45,6 @@ struct AboutView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
-    private var buildString: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-    }
-
-    private var dateFormatter: DateFormatter {
-        let df = DateFormatter()
-        df.dateStyle = .medium
-        df.timeStyle = .short
-        return df
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -229,87 +75,9 @@ struct AboutView: View {
                         .font(.title2)
                         .fontWeight(.semibold)
 
-                    VStack(spacing: 2) {
-                        Text("Version \(versionString) (\(buildString))")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-
-                        if signingInfo.certCommonName != "Unknown" || signingInfo.certExpiry != nil || signingInfo.provName != "Unknown" || signingInfo.provExpiry != nil {
-                            VStack(spacing: 2) {
-                                Divider()
-
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Signing certificate")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-
-                                        Text(signingInfo.certCommonName)
-                                            .font(.caption2)
-                                            .lineLimit(1)
-
-                                        if let certExpiry = signingInfo.certExpiry {
-                                            Text("Expires: \(dateFormatter.string(from: certExpiry))")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Text("Expires: Unknown")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(.top, 6)
-
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Provisioning profile")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-
-                                        Text(signingInfo.provName)
-                                            .font(.caption2)
-                                            .lineLimit(1)
-
-                                        if let provExpiry = signingInfo.provExpiry {
-                                            Text("Expires: \(dateFormatter.string(from: provExpiry))")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Text("Expires: Unknown")
-                                                .font(.caption2)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-
-                                    Spacer()
-                                }
-
-                                HStack {
-                                    if let certExpiry = signingInfo.certExpiry, let provExpiry = signingInfo.provExpiry {
-                                        if Calendar.current.compare(certExpiry, to: provExpiry, toGranularity: .second) == .orderedSame {
-                                            Label("Cert and provision match ✅", systemImage: "checkmark.shield")
-                                                .font(.caption2)
-                                                .foregroundColor(.green)
-                                        } else {
-                                            Label("Cert / provision dates differ ⚠️", systemImage: "exclamationmark.triangle")
-                                                .font(.caption2)
-                                                .foregroundColor(.yellow)
-                                        }
-                                    } else {
-                                        Label("Comparison unavailable", systemImage: "questionmark.circle")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(.top, 6)
-                            }
-                        }
-                    }
+                    Text("Version \(versionString)")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
@@ -320,17 +88,8 @@ struct AboutView: View {
                         CreditRow(credit: c)
                     }
                 }
-
-                if let err = signingInfo.errorMessage {
-                    Section(header: Text("Debug")) {
-                        Text(err)
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                    }
-                }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle("About")
         }
     }
 }
@@ -361,7 +120,6 @@ struct CreditRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(credit.name)
                     .font(.body)
-
                 Text(credit.role)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -386,4 +144,5 @@ struct AboutView_Previews: PreviewProvider {
     static var previews: some View {
         AboutView()
     }
+
 }
