@@ -14,6 +14,7 @@ This is the final major update for ProSign!
 From now on, only **patches and bug fixes** will be released.  
 
 We are now focusing on **ProStore**, the next-level app experience for iOS users.  
+Check out ProStore [here](https://github.com/ProStore-iOS/ProStore/)!  
 
 ---
 
