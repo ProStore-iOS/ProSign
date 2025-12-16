@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ProStoreTools
 import ZIPFoundation
+
 // Centralized types to avoid conflicts
 struct CertificateFileItem {
     var name: String = ""
@@ -12,6 +13,7 @@ struct CustomCertificate: Identifiable {
     let displayName: String
     let folderName: String
 }
+
 // MARK: - Release Models
 struct Release: Codable, Identifiable, Equatable, Hashable {
     let id: Int
@@ -19,11 +21,11 @@ struct Release: Codable, Identifiable, Equatable, Hashable {
     let tagName: String
     let publishedAt: String
     let assets: [Asset]
-   
+
     enum CodingKeys: String, CodingKey {
         case id, name, tagName = "tag_name", publishedAt = "published_at", assets
     }
-   
+
     var publishedDate: Date {
         Date()
     }
@@ -31,11 +33,12 @@ struct Release: Codable, Identifiable, Equatable, Hashable {
 struct Asset: Codable, Hashable, Equatable {
     let name: String
     let browserDownloadUrl: String
-   
+
     enum CodingKeys: String, CodingKey {
         case name, browserDownloadUrl = "browser_download_url"
     }
 }
+
 // MARK: - Date Extension for Formatting
 extension Date {
     func formattedWithOrdinal() -> String {
@@ -47,7 +50,7 @@ extension Date {
         let year = Calendar.current.component(.year, from: self)
         return "\(ordinal) of \(month) \(year)"
     }
-   
+
     private func ordinalSuffix(for number: Int) -> String {
         let suffix: String
         let ones = number % 10
@@ -66,6 +69,7 @@ extension Date {
         return "\(number)\(suffix)"
     }
 }
+
 // MARK: - Official Certificates View
 struct OfficialCertificatesView: View {
     @Environment(\.dismiss) private var dismiss
@@ -79,11 +83,11 @@ struct OfficialCertificatesView: View {
     @State private var password: String? = nil
     @State private var displayName = ""
     @State private var expiry: Date? = nil
-   
+
     private var isSuccess: Bool {
         statusMessage.contains("Success")
     }
-   
+
     private var statusColor: Color {
         if statusMessage.contains("Downloading") {
             return .yellow
@@ -93,13 +97,13 @@ struct OfficialCertificatesView: View {
             return .red
         }
     }
-   
+
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         return f
     }()
-   
+
     var body: some View {
         NavigationStack {
             Form {
@@ -115,11 +119,13 @@ struct OfficialCertificatesView: View {
                         }
                     }
                 }
+
                 Section {
                     Text("Provided by loyahdev")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+
                 if let release = selectedRelease {
                     Section("Details") {
                         Text("Tag: \(release.tagName)")
@@ -133,6 +139,7 @@ struct OfficialCertificatesView: View {
                         }
                     }
                 }
+
                 Section {
                     Button("Add Certificate") {
                         addCertificate()
@@ -160,7 +167,7 @@ struct OfficialCertificatesView: View {
             }
         }
     }
-   
+
     private func clearCertificateData() {
         statusMessage = ""
         expiry = nil
@@ -169,7 +176,7 @@ struct OfficialCertificatesView: View {
         password = nil
         displayName = ""
     }
-   
+
     private func expiryDisplay(for expiry: Date) -> some View {
         let now = Date()
         let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
@@ -188,16 +195,16 @@ struct OfficialCertificatesView: View {
             .foregroundColor(expiryColor)
             .font(.caption)
     }
-   
+
     private func isoDate(string: String) -> Date {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: string) ?? Date()
     }
-   
+
     private func cleanName(_ name: String) -> String {
         name.replacingOccurrences(of: "\\\\", with: "").replacingOccurrences(of: "\\", with: "")
     }
-   
+
     private func getPAT() async -> String? {
         guard let url = URL(string: "https://certapi.loyah.dev/pac") else { return nil }
         do {
@@ -207,7 +214,7 @@ struct OfficialCertificatesView: View {
             return nil
         }
     }
-   
+
     private func fetchReleases() {
         Task {
             let pat = await getPAT()
@@ -239,7 +246,7 @@ struct OfficialCertificatesView: View {
             }
         }
     }
-   
+
     private func findCertificateFiles(in directory: URL) throws -> (p12Urls: [URL], provUrls: [URL]) {
         var p12Urls: [URL] = []
         var provUrls: [URL] = []
@@ -257,7 +264,7 @@ struct OfficialCertificatesView: View {
         }
         return (p12Urls, provUrls)
     }
-   
+
     private func checkCertificate() {
         guard let release = selectedRelease,
               let asset = release.assets.first(where: { $0.name.hasSuffix(".zip") }),
@@ -331,7 +338,7 @@ struct OfficialCertificatesView: View {
             }
         }
     }
-   
+
     private func addCertificate() {
         guard let p12DataLocal = p12Data,
               let provDataLocal = provData,
@@ -356,6 +363,7 @@ struct OfficialCertificatesView: View {
         }
     }
 }
+
 // MARK: - CertificateView (List + Add/Edit launchers)
 struct CertificateView: View {
     @State private var customCertificates: [CustomCertificate] = []
@@ -367,6 +375,7 @@ struct CertificateView: View {
     @State private var showingDeleteAlert = false
     @State private var certToDelete: CustomCertificate?
     @State private var newlyAddedFolder: String? = nil
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
@@ -433,7 +442,7 @@ struct CertificateView: View {
             reloadCertificatesAndEnsureSelection()
         }
     }
-   
+
     private func certificateItem(for cert: CustomCertificate) -> some View {
         ZStack(alignment: .top) {
             certificateContent(for: cert)
@@ -452,7 +461,7 @@ struct CertificateView: View {
             certificateButtons(for: cert)
         }
     }
-   
+
     private func certificateContent(for cert: CustomCertificate) -> some View {
         VStack(alignment: .center, spacing: 12) {
             Text(cert.displayName)
@@ -477,7 +486,7 @@ struct CertificateView: View {
                 .stroke(selectedCert == cert.folderName ? Color.blue : Color.clear, lineWidth: 3)
         )
     }
-   
+
     private func expiryDisplay(for expiry: Date) -> some View {
         let now = Date()
         let components = Calendar.current.dateComponents([.day], from: now, to: expiry)
@@ -495,7 +504,7 @@ struct CertificateView: View {
             .fontWeight(.medium)
             .foregroundColor(.primary)
     }
-   
+
     private func certificateBackground(for cert: CustomCertificate) -> Color {
         guard let expiry = certExpiries[cert.folderName], expiry != nil else {
             return Color.clear
@@ -512,7 +521,7 @@ struct CertificateView: View {
             return .green.opacity(0.15)
         }
     }
-   
+
     private func certificateButtons(for cert: CustomCertificate) -> some View {
         HStack {
             Button(action: {
@@ -526,9 +535,9 @@ struct CertificateView: View {
                     .background(Color(.systemGray6).opacity(0.8))
                     .clipShape(Circle())
             }
-        
+
             Spacer()
-        
+
             Button(action: {
                 if customCertificates.count > 1 {
                     certToDelete = cert
@@ -547,13 +556,16 @@ struct CertificateView: View {
         .padding(.top, 12)
         .padding(.horizontal, 12)
     }
+
+    // keep this small and focused: load from disk and call helpers
     private func reloadCertificatesAndEnsureSelection() {
         customCertificates = CertificateFileManager.shared.loadCertificates()
         selectedCert = UserDefaults.standard.string(forKey: "selectedCertificateFolder")
         ensureSelection()
         loadExpiries()
     }
-   
+
+    // --- moved out of reloadCertificatesAndEnsureSelection so they are type-level private methods ---
     private func loadExpiries() {
         for cert in customCertificates {
             let folderName = cert.folderName
@@ -563,6 +575,7 @@ struct CertificateView: View {
             certExpiries[folderName] = expiry
         }
     }
+
     private func ensureSelection() {
         if selectedCert == nil || !customCertificates.contains(where: { $0.folderName == selectedCert }) {
             if let firstCert = customCertificates.first {
@@ -571,10 +584,11 @@ struct CertificateView: View {
             }
         }
     }
+
     private func deleteCertificate(_ cert: CustomCertificate) {
         try? CertificateFileManager.shared.deleteCertificate(folderName: cert.folderName)
         customCertificates = CertificateFileManager.shared.loadCertificates()
-    
+
         if selectedCert == cert.folderName {
             if let newSelection = customCertificates.first {
                 selectedCert = newSelection.folderName
@@ -588,6 +602,7 @@ struct CertificateView: View {
         loadExpiries()
     }
 }
+
 // MARK: - Add / Edit View
 struct AddCertificateView: View {
     @Environment(\.dismiss) private var dismiss
@@ -601,10 +616,12 @@ struct AddCertificateView: View {
     @State private var errorMessage = ""
     @State private var displayName: String = ""
     @State private var hasLoadedForEdit = false
+
     init(editingCertificate: CustomCertificate? = nil, onSave: ((String) -> Void)? = nil) {
         self.editingCertificate = editingCertificate
         self.onSave = onSave
     }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -623,7 +640,7 @@ struct AddCertificateView: View {
                         }
                     }
                     .disabled(isChecking)
-                
+
                     Button(action: { activeSheet = .prov }) {
                         HStack {
                             Image(systemName: "gearshape.fill")
@@ -639,12 +656,12 @@ struct AddCertificateView: View {
                     }
                     .disabled(isChecking)
                 }
-            
+
                 Section(header: Text("Display Name")) {
                     TextField("Optional Display Name", text: $displayName)
                         .disabled(isChecking)
                 }
-            
+
                 Section(header: Text("Password")) {
                     SecureField("Enter Password", text: $password)
                         .disabled(isChecking)
@@ -652,7 +669,7 @@ struct AddCertificateView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            
+
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -699,16 +716,17 @@ struct AddCertificateView: View {
             }
         }
     }
+
     private func loadForEdit(cert: CustomCertificate) {
         let certFolder = CertificateFileManager.shared.certificatesDirectory.appendingPathComponent(cert.folderName)
         let p12URL = certFolder.appendingPathComponent("certificate.p12")
         let provURL = certFolder.appendingPathComponent("profile.mobileprovision")
         let passwordURL = certFolder.appendingPathComponent("password.txt")
         let nameURL = certFolder.appendingPathComponent("name.txt")
-    
+
         p12File = CertificateFileItem(name: "certificate.p12", url: p12URL)
         provFile = CertificateFileItem(name: "profile.mobileprovision", url: provURL)
-    
+
         if let pwData = try? Data(contentsOf: passwordURL), let pw = String(data: pwData, encoding: .utf8) {
             password = pw
         }
@@ -716,13 +734,13 @@ struct AddCertificateView: View {
             displayName = nameStr
         }
     }
-   
+
     private func saveCertificate() {
         guard let p12URL = p12File?.url, let provURL = provFile?.url else { return }
-    
+
         isChecking = true
         errorMessage = ""
-    
+
         let workItem: DispatchWorkItem = DispatchWorkItem {
             do {
                 var p12Data: Data
@@ -741,16 +759,16 @@ struct AddCertificateView: View {
                     p12Data = try Data(contentsOf: p12URL)
                     provData = try Data(contentsOf: provURL)
                 }
-            
+
                 let checkResult = CertificatesManager.check(p12Data: p12Data, password: self.password, mobileProvisionData: provData)
                 var dispatchError: String?
-            
+
                 switch checkResult {
                 case .success(.success):
                     if localDisplayName.isEmpty {
                         localDisplayName = CertificatesManager.getCertificateName(mobileProvisionData: provData) ?? "Custom Certificate"
                     }
-                
+
                     if let folder = self.editingCertificate?.folderName {
                         try CertificateFileManager.shared.updateCertificate(folderName: folder, p12Data: p12Data, provData: provData, password: self.password, displayName: localDisplayName)
                     } else {
@@ -764,7 +782,7 @@ struct AddCertificateView: View {
                 case .failure(let error):
                     dispatchError = "Error: \(error.localizedDescription)"
                 }
-            
+
                 DispatchQueue.main.async {
                     self.isChecking = false
                     if let err = dispatchError {
