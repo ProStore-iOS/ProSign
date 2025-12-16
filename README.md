@@ -4,6 +4,7 @@
 ![Latest Release](https://img.shields.io/github/v/release/ProStore-iOS/ProSign?style=for-the-badge)
 
 The best on-device `.ipa` signer for iOS!  
+Please use [ProStore](https://github.com/ProStore-iOS/ProStore)!  
 ProSign app source URL: https://prostore-ios.github.io/apps.json
 
 ---
