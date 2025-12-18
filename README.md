@@ -48,7 +48,7 @@ Check out ProStore [here](https://github.com/ProStore-iOS/ProStore/)!
 ---
 
 ## Credits
-- **SuperGamer474** - Developer  
+- **NovaDev404** - Developer  
 - **ChatGPT** - Assistance  
 - **[Khcrysalis](https://github.com/khcrysalis/)** - Creator of the [Zsign Package](https://github.com/khcrysalis/Zsign-Package)  
 - **[loyahdev](https://github.com/loyahdev/)** - Official ProSign [certificates](https://github.com/loyahdev/certificates) provider!
