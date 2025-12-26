@@ -454,9 +454,9 @@ jobs:
             jq -n --arg icon "$ICON_URL" '{
               name: "Official ProStore Repo",
               identifier: "com.prostoreios.prostore.repo",
-              sourceURL: "https://ProStore-iOS.github.io/apps.json",
+              sourceURL: "https://ProStore.NovaDev.vip/apps.json",
               iconURL: $icon,
-              website: "https://ProStore-iOS.github.io",
+              website: "https://ProStore.NovaDev.vip",
               subtitle: "The BEST alternative app store for iOS!",
               apps: []
             }' > "$REPO_FILE"
